@@ -33,12 +33,14 @@ impl<T: Copy> ReadArrayVariable<T> {
 
     pub async fn read_to_slice(&mut self, dst: &mut [T]) -> Option<usize> {
         let src = self.read_in_place().await;
-        if dst.len() >= src.len() {
+        let res = if dst.len() >= src.len() {
             dst[..src.len()].copy_from_slice(&src);
             Some(src.len())
         } else {
             None
-        }
+        };
+        src.close().await;
+        res
     }
 }
 
