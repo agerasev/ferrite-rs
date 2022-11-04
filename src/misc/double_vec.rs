@@ -1,9 +1,10 @@
 use super::AsyncFlag;
-use async_std::sync::{Arc, Mutex, MutexGuard};
+use futures::lock::{Mutex, MutexGuard};
 use std::{
     mem::{swap, ManuallyDrop},
     ops::{Deref, DerefMut},
     ptr,
+    sync::Arc,
 };
 
 pub struct DoubleVec<T> {

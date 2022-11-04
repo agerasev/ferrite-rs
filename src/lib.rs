@@ -1,11 +1,13 @@
 mod raw;
 
-pub mod channel;
 pub mod misc;
 pub mod variable;
 
 pub use raw::export;
-pub use variable::{AnyVariable, Downcast, ReadArrayVariable, ReadVariable, VariableType, WriteArrayVariable, WriteVariable};
+pub use variable::{
+    AnyVariable, Downcast, ReadArrayVariable, ReadVariable, VariableType, WriteArrayVariable,
+    WriteVariable,
+};
 
 use std::collections::HashMap;
 
