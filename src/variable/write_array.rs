@@ -2,30 +2,35 @@ use std::{
     future::Future,
     marker::PhantomData,
     mem::MaybeUninit,
+    ops::{Deref, DerefMut},
     pin::Pin,
     slice,
     task::{Context, Poll},
 };
 
+use super::{AnyVariable, VariableType};
 use crate::raw::{self, variable::ProcState};
 
+#[repr(transparent)]
 pub struct WriteArrayVariable<T: Copy> {
     raw: raw::Variable,
-    max_len: usize,
     _phantom: PhantomData<T>,
 }
 
 impl<T: Copy> WriteArrayVariable<T> {
-    pub(crate) fn from_raw(raw: raw::Variable, max_len: usize) -> Self {
+    pub(crate) fn from_raw(raw: raw::Variable) -> Self {
         Self {
             raw,
-            max_len,
             _phantom: PhantomData,
         }
     }
 
     pub fn max_len(&self) -> usize {
-        self.max_len
+        if let VariableType::Array { max_len, .. } = self.data_type() {
+            max_len
+        } else {
+            unreachable!()
+        }
     }
 
     pub fn init_in_place(&mut self) -> InitInPlaceFuture<'_, T> {
@@ -33,13 +38,26 @@ impl<T: Copy> WriteArrayVariable<T> {
     }
 
     pub async fn write_from_slice(&mut self, src: &[T]) {
-        assert!(src.len() <= self.max_len);
+        assert!(src.len() <= self.max_len());
         let mut guard = self.init_in_place().await;
         let dst_uninit = guard.as_uninit_slice();
-        let src_uninit = unsafe { slice::from_raw_parts(src.as_ptr() as *const MaybeUninit<T>, src.len()) };
+        let src_uninit =
+            unsafe { slice::from_raw_parts(src.as_ptr() as *const MaybeUninit<T>, src.len()) };
         dst_uninit[..src.len()].copy_from_slice(src_uninit);
         guard.set_len(src.len());
         guard.write().await;
+    }
+}
+
+impl<T: Copy> Deref for WriteArrayVariable<T> {
+    type Target = AnyVariable;
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(self as *const _ as *const AnyVariable) }
+    }
+}
+impl<T: Copy> DerefMut for WriteArrayVariable<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(self as *mut _ as *mut AnyVariable) }
     }
 }
 
@@ -80,16 +98,19 @@ impl<'a, T: Copy> WriteArrayGuard<'a, T> {
 
     pub fn as_uninit_slice(&mut self) -> &mut [MaybeUninit<T>] {
         let owner = self.owner.as_ref().unwrap();
-        let max_len = owner.max_len;
+        let max_len = owner.max_len();
         unsafe {
             let raw_unprotected = owner.raw.get_unprotected();
-            std::slice::from_raw_parts_mut(raw_unprotected.data_ptr() as *mut MaybeUninit<T>, max_len)
+            std::slice::from_raw_parts_mut(
+                raw_unprotected.data_ptr() as *mut MaybeUninit<T>,
+                max_len,
+            )
         }
     }
 
     pub fn set_len(&mut self, new_len: usize) {
         let owner = self.owner.as_mut().unwrap();
-        assert!(new_len <= owner.max_len);
+        assert!(new_len <= owner.max_len());
         unsafe { owner.raw.get_unprotected_mut() }.array_set_len(new_len);
     }
 

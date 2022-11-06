@@ -14,7 +14,10 @@ macro_rules! impl_atomic_variable {
         }
 
         impl $self {
-            pub fn new(mut variable: WriteVariable<$value>, exec: &impl Spawn) -> Result<Arc<Self>, SpawnError> {
+            pub fn new(
+                mut variable: WriteVariable<$value>,
+                exec: &impl Spawn,
+            ) -> Result<Arc<Self>, SpawnError> {
                 let self_ = Arc::new(Self {
                     event: AsyncFlag::new(false),
                     value: <$atomic>::new(0),

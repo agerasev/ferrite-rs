@@ -9,7 +9,9 @@ use std::{
 };
 
 use super::import::*;
-pub use super::import::{FerVarDir as Dir, FerVarKind as Kind, FerVarScalarType as ScalarType, FerVarType as Type};
+pub use super::import::{
+    FerVarDir as Dir, FerVarKind as Kind, FerVarScalarType as ScalarType, FerVarType as Type,
+};
 
 pub(crate) struct VariableUnprotected {
     ptr: *mut FerVar,

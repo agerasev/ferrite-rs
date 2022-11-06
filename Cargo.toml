@@ -10,4 +10,5 @@ futures = "0.3.25"
 log = "0.4"
 
 [dev-dependencies]
+async-std = "1.12.0"
 async-ringbuf = "0.1.0"

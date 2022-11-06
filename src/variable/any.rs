@@ -5,36 +5,33 @@ use super::{
 use crate::raw;
 use std::any::TypeId;
 
+#[repr(transparent)]
 pub struct AnyVariable {
     raw: raw::Variable,
-    type_: VariableType,
-    dir: Direction,
 }
 
 impl AnyVariable {
     pub(crate) fn new(raw: raw::Variable) -> Self {
-        let raw_type = raw.data_type();
-        Self {
-            raw,
-            type_: VariableType::from_raw(raw_type),
-            dir: Direction::from_raw(raw_type.dir),
-        }
+        Self { raw }
     }
 
     pub fn name(&self) -> String {
         self.raw.name().to_str().unwrap().to_owned()
     }
 
+    fn raw_data_type(&self) -> raw::variable::Type {
+        self.raw.data_type()
+    }
     pub fn direction(&self) -> Direction {
-        self.dir
+        Direction::from_raw(self.raw_data_type().dir)
     }
     pub fn data_type(&self) -> VariableType {
-        self.type_
+        VariableType::from_raw(self.raw_data_type())
     }
 
     pub fn downcast_read<T: Copy + 'static + 'static>(self) -> Option<ReadVariable<T>> {
-        match self.dir {
-            Direction::Read => match self.type_ {
+        match self.direction() {
+            Direction::Read => match self.data_type() {
                 VariableType::Scalar { scal_type } => {
                     if scal_type.type_id() == Some(TypeId::of::<T>()) {
                         Some(ReadVariable::from_raw(self.raw))
@@ -48,9 +45,9 @@ impl AnyVariable {
         }
     }
     pub fn downcast_write<T: Copy + 'static + 'static>(self) -> Option<WriteVariable<T>> {
-        match self.dir {
+        match self.direction() {
             Direction::Read => None,
-            Direction::Write => match self.type_ {
+            Direction::Write => match self.data_type() {
                 VariableType::Scalar { scal_type } => {
                     if scal_type.type_id() == Some(TypeId::of::<T>()) {
                         Some(WriteVariable::from_raw(self.raw))
@@ -63,11 +60,11 @@ impl AnyVariable {
         }
     }
     pub fn downcast_read_array<T: Copy + 'static + 'static>(self) -> Option<ReadArrayVariable<T>> {
-        match self.dir {
-            Direction::Read => match self.type_ {
-                VariableType::Array { scal_type, max_len } => {
+        match self.direction() {
+            Direction::Read => match self.data_type() {
+                VariableType::Array { scal_type, .. } => {
                     if scal_type.type_id() == Some(TypeId::of::<T>()) {
-                        Some(ReadArrayVariable::from_raw(self.raw, max_len))
+                        Some(ReadArrayVariable::from_raw(self.raw))
                     } else {
                         None
                     }
@@ -77,13 +74,15 @@ impl AnyVariable {
             Direction::Write => None,
         }
     }
-    pub fn downcast_write_array<T: Copy + 'static + 'static>(self) -> Option<WriteArrayVariable<T>> {
-        match self.dir {
+    pub fn downcast_write_array<T: Copy + 'static + 'static>(
+        self,
+    ) -> Option<WriteArrayVariable<T>> {
+        match self.direction() {
             Direction::Read => None,
-            Direction::Write => match self.type_ {
-                VariableType::Array { scal_type, max_len } => {
+            Direction::Write => match self.data_type() {
+                VariableType::Array { scal_type, .. } => {
                     if scal_type.type_id() == Some(TypeId::of::<T>()) {
-                        Some(WriteArrayVariable::from_raw(self.raw, max_len))
+                        Some(WriteArrayVariable::from_raw(self.raw))
                     } else {
                         None
                     }

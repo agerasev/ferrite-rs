@@ -1,30 +1,26 @@
 use std::{
     future::Future,
     marker::PhantomData,
-    ops::Deref,
+    ops::{Deref, DerefMut},
     pin::Pin,
     task::{Context, Poll},
 };
 
+use super::WriteArrayVariable;
 use crate::raw::{self, variable::ProcState};
 
+#[repr(transparent)]
 pub struct ReadArrayVariable<T: Copy> {
     raw: raw::Variable,
-    max_len: usize,
     _phantom: PhantomData<T>,
 }
 
 impl<T: Copy> ReadArrayVariable<T> {
-    pub(crate) fn from_raw(raw: raw::Variable, max_len: usize) -> Self {
+    pub(crate) fn from_raw(raw: raw::Variable) -> Self {
         Self {
             raw,
-            max_len,
             _phantom: PhantomData,
         }
-    }
-
-    pub fn max_len(&self) -> usize {
-        self.max_len
     }
 
     pub fn read_in_place(&mut self) -> ReadInPlaceFuture<'_, T> {
@@ -41,6 +37,18 @@ impl<T: Copy> ReadArrayVariable<T> {
         };
         src.close().await;
         res
+    }
+}
+
+impl<T: Copy> Deref for ReadArrayVariable<T> {
+    type Target = WriteArrayVariable<T>;
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(self as *const _ as *const WriteArrayVariable<T>) }
+    }
+}
+impl<T: Copy> DerefMut for ReadArrayVariable<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(self as *mut _ as *mut WriteArrayVariable<T>) }
     }
 }
 
@@ -81,7 +89,10 @@ impl<'a, T: Copy> ReadArrayGuard<'a, T> {
     pub fn as_slice(&self) -> &[T] {
         unsafe {
             let raw_unprotected = self.owner.as_ref().unwrap().raw.get_unprotected();
-            std::slice::from_raw_parts(raw_unprotected.data_ptr() as *const T, raw_unprotected.array_len())
+            std::slice::from_raw_parts(
+                raw_unprotected.data_ptr() as *const T,
+                raw_unprotected.array_len(),
+            )
         }
     }
 

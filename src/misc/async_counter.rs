@@ -31,7 +31,10 @@ impl AsyncCounter {
         value
     }
     pub fn wait(&self, min_value: usize) -> WaitFuture<'_> {
-        WaitFuture { owner: self, min_value }
+        WaitFuture {
+            owner: self,
+            min_value,
+        }
     }
 }
 

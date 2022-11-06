@@ -1,12 +1,15 @@
 use std::{
     future::Future,
     marker::PhantomData,
+    ops::{Deref, DerefMut},
     pin::Pin,
     task::{Context, Poll},
 };
 
+use super::AnyVariable;
 use crate::raw::{self, variable::ProcState};
 
+#[repr(transparent)]
 pub struct WriteVariable<T: Copy> {
     raw: raw::Variable,
     _phantom: PhantomData<T>,
@@ -26,6 +29,18 @@ impl<T: Copy> WriteVariable<T> {
             value,
             complete: false,
         }
+    }
+}
+
+impl<T: Copy> Deref for WriteVariable<T> {
+    type Target = AnyVariable;
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(self as *const _ as *const AnyVariable) }
+    }
+}
+impl<T: Copy> DerefMut for WriteVariable<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(self as *mut _ as *mut AnyVariable) }
     }
 }
 
