@@ -14,97 +14,117 @@ pub use super::import::{
     FerVarValue as Value,
 };
 
-pub(crate) struct VariableUnprotected {
-    ptr: *mut FerVar,
+#[repr(transparent)]
+pub(crate) struct VariableBase {
+    raw: *mut FerVar,
 }
 
-unsafe impl Send for VariableUnprotected {}
+unsafe impl Send for VariableBase {}
+
+impl VariableBase {
+    pub unsafe fn from_raw(raw: *mut FerVar) -> Self {
+        Self { raw }
+    }
+
+    pub unsafe fn clean_proc(&mut self) {
+        let prev = self.state().swap_proc_state(ProcState::Idle);
+        debug_assert_eq!(prev, ProcState::Complete);
+    }
+
+    pub fn name(&self) -> &CStr {
+        unsafe { CStr::from_ptr(fer_var_name(self.raw)) }
+    }
+    pub fn info(&self) -> Info {
+        unsafe { fer_var_info(self.raw) }
+    }
+    pub fn value(&self) -> &Value {
+        unsafe { &*fer_var_value(self.raw) }
+    }
+    pub fn value_mut(&mut self) -> &mut Value {
+        unsafe { &mut *fer_var_value(self.raw) }
+    }
+
+    pub fn state(&self) -> &State {
+        unsafe { (self.user_data() as *const State).as_ref() }.unwrap()
+    }
+    fn user_data(&self) -> *mut c_void {
+        unsafe { fer_var_user_data(self.raw) }
+    }
+    fn set_user_data(&mut self, user_data: *mut c_void) {
+        unsafe { fer_var_set_user_data(self.raw, user_data) }
+    }
+}
+
+#[repr(transparent)]
+pub(crate) struct VariableUnprotected {
+    base: VariableBase,
+}
 
 impl VariableUnprotected {
-    pub unsafe fn from_ptr(ptr: *mut FerVar) -> Self {
-        Self { ptr }
+    pub unsafe fn from_raw(raw: *mut FerVar) -> Self {
+        Self {
+            base: VariableBase::from_raw(raw),
+        }
     }
+
     pub fn init(&mut self) {
         assert!(self.user_data().is_null());
-        let info = Box::new(Info::new());
+        let info = Box::new(State::new());
         self.set_user_data(Box::into_raw(info) as *mut c_void);
     }
 
     pub unsafe fn request_proc(&mut self) {
-        let prev = self.info().swap_proc_state(ProcState::Requested);
+        let prev = self.state().swap_proc_state(ProcState::Requested);
         debug_assert_eq!(prev, ProcState::Idle);
-        fer_var_request(self.ptr);
+        fer_var_request(self.raw);
     }
     pub unsafe fn proc_begin(&mut self) {
-        let info = self.info();
-        let prev = info.swap_proc_state(ProcState::Processing);
+        let state = self.state();
+        let prev = state.swap_proc_state(ProcState::Processing);
         debug_assert!(prev == ProcState::Idle || prev == ProcState::Requested);
-        info.try_wake();
+        state.try_wake();
     }
     pub unsafe fn complete_read(&mut self) {
-        let prev = self.info().swap_proc_state(ProcState::Ready);
+        let prev = self.state().swap_proc_state(ProcState::Ready);
         debug_assert_eq!(prev, ProcState::Processing);
-        fer_var_read_complete(self.ptr, Status::Ok);
+        fer_var_read_complete(self.raw, Status::Ok);
     }
     pub unsafe fn complete_write(&mut self) {
-        let prev = self.info().swap_proc_state(ProcState::Ready);
+        let prev = self.state().swap_proc_state(ProcState::Ready);
         debug_assert_eq!(prev, ProcState::Processing);
-        fer_var_write_complete(self.ptr, Status::Ok);
+        fer_var_write_complete(self.raw, Status::Ok);
     }
     pub unsafe fn proc_end(&mut self) {
-        let info = self.info();
-        let prev = info.swap_proc_state(ProcState::Complete);
+        let state = self.state();
+        let prev = state.swap_proc_state(ProcState::Complete);
         debug_assert_eq!(prev, ProcState::Ready);
-        info.try_wake();
-    }
-    unsafe fn clean_proc(&mut self) {
-        let prev = self.info().swap_proc_state(ProcState::Idle);
-        debug_assert_eq!(prev, ProcState::Complete);
+        state.try_wake();
     }
 
     pub unsafe fn lock(&self) {
-        fer_var_lock(self.ptr);
+        fer_var_lock(self.raw);
     }
     pub unsafe fn unlock(&self) {
-        fer_var_unlock(self.ptr);
-    }
-
-    pub fn name(&self) -> &CStr {
-        unsafe { CStr::from_ptr(fer_var_name(self.ptr)) }
-    }
-    pub fn data_type(&self) -> Type {
-        unsafe { fer_var_type(self.ptr) }
-    }
-
-    pub fn data_ptr(&self) -> *const c_void {
-        unsafe { fer_var_data(self.ptr) }
-    }
-    pub fn data_mut_ptr(&mut self) -> *mut c_void {
-        unsafe { fer_var_data(self.ptr) }
-    }
-    pub fn array_len(&self) -> usize {
-        unsafe { fer_var_array_len(self.ptr) }
-    }
-    pub fn array_set_len(&mut self, new_size: usize) {
-        unsafe { fer_var_array_set_len(self.ptr, new_size) }
-    }
-
-    pub fn info(&self) -> &Info {
-        unsafe { (self.user_data() as *const Info).as_ref() }.unwrap()
-    }
-    fn user_data(&self) -> *mut c_void {
-        unsafe { fer_var_user_data(self.ptr) }
-    }
-    fn set_user_data(&mut self, user_data: *mut c_void) {
-        unsafe { fer_var_set_user_data(self.ptr, user_data) }
+        fer_var_unlock(self.raw);
     }
 }
 
+impl Deref for VariableUnprotected {
+    type Target = VariableBase;
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+impl DerefMut for VariableUnprotected {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
+}
+
+#[repr(transparent)]
 pub(crate) struct Variable {
     var: VariableUnprotected,
 }
-
-unsafe impl Send for Variable {}
 
 impl Variable {
     pub unsafe fn new(var: VariableUnprotected) -> Self {
@@ -125,19 +145,17 @@ impl Variable {
     pub fn lock(&mut self) -> Guard<'_> {
         Guard::new(&mut self.var)
     }
+}
 
-    pub fn info(&self) -> &'_ Info {
-        self.var.info()
+impl Deref for Variable {
+    type Target = VariableBase;
+    fn deref(&self) -> &Self::Target {
+        &self.var
     }
-    pub fn name(&self) -> &CStr {
-        self.var.name()
-    }
-    pub fn data_type(&self) -> Type {
-        self.var.data_type()
-    }
-
-    pub unsafe fn clean_proc(&mut self) {
-        self.var.clean_proc()
+}
+impl DerefMut for Variable {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.var
     }
 }
 
@@ -177,12 +195,12 @@ pub(crate) enum ProcState {
     Complete,
 }
 
-pub(crate) struct Info {
+pub(crate) struct State {
     proc_state: AtomicProcState,
     waker: AtomicWaker,
 }
 
-impl Info {
+impl State {
     pub fn new() -> Self {
         Self {
             proc_state: AtomicProcState::new(ProcState::Idle),
@@ -205,4 +223,4 @@ impl Info {
     }
 }
 
-unsafe impl Send for Info {}
+unsafe impl Send for State {}

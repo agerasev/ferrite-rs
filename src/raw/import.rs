@@ -1,5 +1,8 @@
 use bitflags::bitflags;
-use std::os::raw::{c_char, c_int, c_void};
+use std::{
+    any::TypeId,
+    os::raw::{c_char, c_int, c_void},
+};
 
 #[repr(C)]
 pub struct FerVar {
@@ -14,6 +17,7 @@ pub enum FerVarStatus {
 }
 
 bitflags! {
+    #[repr(transparent)]
     pub struct FerVarPerm: u32 {
         const READ = 1;
         const WRITE = 2;
@@ -34,6 +38,23 @@ pub enum FerVarType {
     I64,
     F32,
     F64,
+}
+
+impl FerVarType {
+    pub fn type_id(self) -> TypeId {
+        match self {
+            FerVarType::U8 => TypeId::of::<u8>(),
+            FerVarType::I8 => TypeId::of::<i8>(),
+            FerVarType::U16 => TypeId::of::<u16>(),
+            FerVarType::I16 => TypeId::of::<i16>(),
+            FerVarType::U32 => TypeId::of::<u32>(),
+            FerVarType::I32 => TypeId::of::<i32>(),
+            FerVarType::U64 => TypeId::of::<u64>(),
+            FerVarType::I64 => TypeId::of::<i64>(),
+            FerVarType::F32 => TypeId::of::<f32>(),
+            FerVarType::F64 => TypeId::of::<f64>(),
+        }
+    }
 }
 
 #[repr(C)]
