@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use std::os::raw::{c_char, c_int, c_void};
 
 #[repr(C)]
@@ -5,28 +6,25 @@ pub struct FerVar {
     _unused: [u8; 0],
 }
 
-#[allow(dead_code)]
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FerVarKind {
-    Scalar = 0,
-    Array,
+pub enum FerVarStatus {
+    Ok = 0,
+    Error,
 }
 
-#[allow(dead_code)]
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FerVarDir {
-    Read = 0,
-    Write,
+bitflags! {
+    pub struct FerVarPerm: u32 {
+        const READ = 1;
+        const WRITE = 2;
+        const NOTIFY = 4;
+    }
 }
 
-#[allow(dead_code)]
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FerVarScalarType {
-    None = 0,
-    U8,
+pub enum FerVarType {
+    U8 = 0,
     I8,
     U16,
     I16,
@@ -39,28 +37,33 @@ pub enum FerVarScalarType {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct FerVarInfo {
+    pub perm: FerVarPerm,
+    pub type_: FerVarType,
+    pub max_len: usize,
+}
+
+#[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct FerVarType {
-    pub kind: FerVarKind,
-    pub dir: FerVarDir,
-    pub scalar_type: FerVarScalarType,
-    pub array_max_len: usize,
+pub struct FerVarValue {
+    pub data: *mut c_void,
+    pub len: usize,
 }
 
 extern "C" {
     pub fn fer_app_exit(code: c_int);
 
-    pub fn fer_var_request_proc(var: *mut FerVar);
-    pub fn fer_var_complete_proc(var: *mut FerVar);
+    pub fn fer_var_request(var: *mut FerVar);
+    pub fn fer_var_read_complete(var: *mut FerVar, status: FerVarStatus);
+    pub fn fer_var_write_complete(var: *mut FerVar, status: FerVarStatus);
+
     pub fn fer_var_lock(var: *mut FerVar);
     pub fn fer_var_unlock(var: *mut FerVar);
 
     pub fn fer_var_name(var: *mut FerVar) -> *const c_char;
-    pub fn fer_var_type(var: *mut FerVar) -> FerVarType;
-
-    pub fn fer_var_data(var: *mut FerVar) -> *mut c_void;
-    pub fn fer_var_array_len(var: *mut FerVar) -> usize;
-    pub fn fer_var_array_set_len(var: *mut FerVar, new_size: usize);
+    pub fn fer_var_info(var: *mut FerVar) -> FerVarInfo;
+    pub fn fer_var_value(var: *mut FerVar) -> *mut FerVarValue;
 
     pub fn fer_var_user_data(var: *mut FerVar) -> *mut c_void;
     pub fn fer_var_set_user_data(var: *mut FerVar, user_data: *mut c_void);

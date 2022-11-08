@@ -10,7 +10,8 @@ use std::{
 
 use super::import::*;
 pub use super::import::{
-    FerVarDir as Dir, FerVarKind as Kind, FerVarScalarType as ScalarType, FerVarType as Type,
+    FerVarInfo as Info, FerVarPerm as Perm, FerVarStatus as Status, FerVarType as Type,
+    FerVarValue as Value,
 };
 
 pub(crate) struct VariableUnprotected {
@@ -32,7 +33,7 @@ impl VariableUnprotected {
     pub unsafe fn request_proc(&mut self) {
         let prev = self.info().swap_proc_state(ProcState::Requested);
         debug_assert_eq!(prev, ProcState::Idle);
-        fer_var_request_proc(self.ptr);
+        fer_var_request(self.ptr);
     }
     pub unsafe fn proc_begin(&mut self) {
         let info = self.info();
@@ -40,10 +41,15 @@ impl VariableUnprotected {
         debug_assert!(prev == ProcState::Idle || prev == ProcState::Requested);
         info.try_wake();
     }
-    pub unsafe fn complete_proc(&mut self) {
+    pub unsafe fn complete_read(&mut self) {
         let prev = self.info().swap_proc_state(ProcState::Ready);
         debug_assert_eq!(prev, ProcState::Processing);
-        fer_var_complete_proc(self.ptr);
+        fer_var_read_complete(self.ptr, Status::Ok);
+    }
+    pub unsafe fn complete_write(&mut self) {
+        let prev = self.info().swap_proc_state(ProcState::Ready);
+        debug_assert_eq!(prev, ProcState::Processing);
+        fer_var_write_complete(self.ptr, Status::Ok);
     }
     pub unsafe fn proc_end(&mut self) {
         let info = self.info();
