@@ -4,7 +4,8 @@ use std::sync::{
     Arc,
 };
 
-use crate::{misc::AsyncFlag, variable::WriteVariable};
+use super::{VarActive, Variable};
+use crate::misc::AsyncFlag;
 
 macro_rules! impl_atomic_variable {
     ($self:ident, $value:ty, $atomic:ty) => {
@@ -15,7 +16,7 @@ macro_rules! impl_atomic_variable {
 
         impl $self {
             pub fn new(
-                mut variable: WriteVariable<$value>,
+                mut variable: Variable<$value, false, true, true>,
                 exec: &impl Spawn,
             ) -> Result<Arc<Self>, SpawnError> {
                 let self_ = Arc::new(Self {
@@ -27,7 +28,7 @@ macro_rules! impl_atomic_variable {
                     loop {
                         handle.event.take().await;
                         let value = handle.value.load(Ordering::Acquire);
-                        variable.write(value).await;
+                        variable.request().await.write(value).await;
                     }
                 })?;
                 Ok(self_)

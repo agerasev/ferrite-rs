@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc)]
+
 use super::{
     import::*,
     variable::{Variable, VariableUnprotected},
@@ -30,31 +32,22 @@ pub extern "C" fn fer_app_start() {
     });
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
-pub extern "C" fn fer_var_init(ptr: *mut FerVar) {
-    let mut unvar = unsafe { VariableUnprotected::from_ptr(ptr) };
+pub unsafe extern "C" fn fer_var_init(ptr: *mut FerVar) {
+    let mut unvar = VariableUnprotected::from_raw(ptr);
     unvar.init();
-    let any_var = AnyVariable::new(unsafe { Variable::new(unvar) });
+    let any_var = AnyVariable::new(Variable::new(unvar));
     registry::add_variable(any_var);
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
-pub extern "C" fn fer_var_proc_begin(ptr: *mut FerVar) {
+pub unsafe extern "C" fn fer_var_proc_begin(ptr: *mut FerVar) {
     // No need for lock here - variable is already locked during this call.
-    unsafe {
-        let mut unvar = VariableUnprotected::from_ptr(ptr);
-        unvar.proc_begin();
-    }
+    VariableUnprotected::from_raw(ptr).proc_begin();
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
-pub extern "C" fn fer_var_proc_end(ptr: *mut FerVar) {
+pub unsafe extern "C" fn fer_var_proc_end(ptr: *mut FerVar) {
     // No need for lock here - variable is already locked during this call.
-    unsafe {
-        let mut unvar = VariableUnprotected::from_ptr(ptr);
-        unvar.proc_end();
-    }
+    VariableUnprotected::from_raw(ptr).proc_end();
 }

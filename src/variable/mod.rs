@@ -1,18 +1,12 @@
-mod typing;
-
-mod any;
-mod read;
-mod read_array;
-mod write;
-mod write_array;
-
+pub mod any;
+pub mod array;
 pub mod atomic;
 pub mod registry;
+pub mod scalar;
+pub mod sync;
 
-pub use typing::VariableType;
-
-pub use any::{AnyVariable, Downcast};
-pub use read::ReadVariable;
-pub use read_array::ReadArrayVariable;
-pub use write::WriteVariable;
-pub use write_array::WriteArrayVariable;
+pub use any::{AnyVariable, Downcast, Var};
+pub use array::ArrayVariable;
+pub use registry::Registry;
+pub use scalar::Variable;
+pub use sync::{VarActive, VarSync};
