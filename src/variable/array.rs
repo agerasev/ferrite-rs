@@ -6,7 +6,7 @@ use std::{
     slice,
 };
 
-pub type InPlaceVec<'a, T> = GenericVec<T, &'a mut [MaybeUninit<T>]>;
+pub type FlatVec<T> = GenericVec<T, [MaybeUninit<T>]>;
 
 use super::{
     any::{AnyVariable, Var},
@@ -45,20 +45,22 @@ impl<T: Copy, const R: bool, const W: bool, const A: bool> ArrayVariable<T, R, W
         self.info().max_len
     }
 
-    unsafe fn value(&self) -> &[T] {
-        let raw = self.raw();
-        let len = raw.value().len;
-        slice::from_raw_parts(raw.value().data as *const T, len)
+    unsafe fn value(&self) -> &FlatVec<T> {
+        let cap = self.max_len();
+        &*(slice::from_raw_parts(self.raw().value_ptr() as *const u8, cap) as *const [u8]
+            as *const [T] as *const FlatVec<T>)
     }
-    unsafe fn set_len(&mut self, len: usize) {
-        assert!(len <= self.max_len());
-        self.raw_mut().value_mut().len = len;
+    unsafe fn value_mut(&mut self) -> &mut FlatVec<T> {
+        let cap = self.max_len();
+        &mut *(slice::from_raw_parts_mut(self.raw_mut().value_mut_ptr() as *mut u8, cap)
+            as *mut [u8] as *mut [T] as *mut FlatVec<T>)
     }
 }
 
 impl<'a, T: Copy, const R: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, R, true, A>> {
-    pub fn write(self) -> WriteGuard<'a, T, R, A> {
-        WriteGuard::new(self)
+    pub fn write(mut self) -> WriteGuard<'a, T, R, A> {
+        unsafe { self.owner_mut().value_mut().clear() };
+        WriteGuard { guard: self }
     }
 }
 
@@ -71,26 +73,10 @@ impl<'a, T: Copy, const W: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, 
 #[must_use]
 pub struct WriteGuard<'a, T: Copy, const R: bool, const A: bool> {
     guard: ValueGuard<'a, ArrayVariable<T, R, true, A>>,
-    value: InPlaceVec<'a, T>,
 }
 
 impl<'a, T: Copy, const R: bool, const A: bool> WriteGuard<'a, T, R, A> {
-    fn new(mut guard: ValueGuard<'a, ArrayVariable<T, R, true, A>>) -> Self {
-        let owner = guard.owner_mut();
-        let cap = owner.max_len();
-        let value = unsafe {
-            InPlaceVec::from_raw_parts(
-                slice::from_raw_parts_mut(
-                    owner.raw_mut().value_mut().data as *mut MaybeUninit<T>,
-                    cap,
-                ),
-                0,
-            )
-        };
-        Self { guard, value }
-    }
-    pub fn commit(mut self) -> CommitFuture<'a, ArrayVariable<T, R, true, A>> {
-        unsafe { self.guard.owner_mut().set_len(self.value.len()) };
+    pub fn commit(self) -> CommitFuture<'a, ArrayVariable<T, R, true, A>> {
         self.guard.commit(Action::Write)
     }
     pub fn discard(self) -> CommitFuture<'a, ArrayVariable<T, R, true, A>> {
@@ -99,14 +85,14 @@ impl<'a, T: Copy, const R: bool, const A: bool> WriteGuard<'a, T, R, A> {
 }
 
 impl<'a, T: Copy, const R: bool, const A: bool> Deref for WriteGuard<'a, T, R, A> {
-    type Target = InPlaceVec<'a, T>;
+    type Target = FlatVec<T>;
     fn deref(&self) -> &Self::Target {
-        &self.value
+        unsafe { self.guard.owner().value() }
     }
 }
 impl<'a, T: Copy, const R: bool, const A: bool> DerefMut for WriteGuard<'a, T, R, A> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.value
+        unsafe { self.guard.owner_mut().value_mut() }
     }
 }
 

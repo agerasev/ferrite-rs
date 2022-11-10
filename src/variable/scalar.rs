@@ -34,10 +34,10 @@ impl<T: Copy, const R: bool, const W: bool, const A: bool> Variable<T, R, W, A> 
     }
 
     unsafe fn value(&self) -> &T {
-        &*(self.raw().value().data as *const T)
+        &*(self.raw().value_ptr() as *const T)
     }
     unsafe fn value_mut(&mut self) -> &mut T {
-        &mut *(self.raw_mut().value_mut().data as *mut T)
+        &mut *(self.raw_mut().value_mut_ptr() as *mut T)
     }
 }
 

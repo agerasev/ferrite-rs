@@ -67,10 +67,8 @@ pub struct FerVarInfo {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
 pub struct FerVarValue {
-    pub data: *mut c_void,
-    pub len: usize,
+    _unused: [u8; 0],
 }
 
 extern "C" {
@@ -85,6 +83,8 @@ extern "C" {
     pub fn fer_var_name(var: *mut FerVar) -> *const c_char;
     pub fn fer_var_info(var: *mut FerVar) -> FerVarInfo;
     pub fn fer_var_value(var: *mut FerVar) -> *mut FerVarValue;
+    //pub fn fer_var_value_len(var: *mut FerVar) -> *mut usize;
+    //pub fn fer_var_value_data(var: *mut FerVar) -> *mut c_void;
 
     pub fn fer_var_user_data(var: *mut FerVar) -> *mut c_void;
     pub fn fer_var_set_user_data(var: *mut FerVar, user_data: *mut c_void);

@@ -32,11 +32,11 @@ impl VariableBase {
     pub fn info(&self) -> Info {
         unsafe { fer_var_info(self.raw) }
     }
-    pub fn value(&self) -> &Value {
-        unsafe { &*fer_var_value(self.raw) }
+    pub fn value_ptr(&self) -> *const Value {
+        unsafe { fer_var_value(self.raw) }
     }
-    pub fn value_mut(&mut self) -> &mut Value {
-        unsafe { &mut *fer_var_value(self.raw) }
+    pub fn value_mut_ptr(&mut self) -> *mut Value {
+        unsafe { fer_var_value(self.raw) }
     }
 
     pub fn state(&self) -> &State {
