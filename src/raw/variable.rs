@@ -10,12 +10,12 @@ use std::{
 
 use super::import::*;
 pub use super::import::{
-    FerVarInfo as Info, FerVarPerm as Perm, FerVarStatus as Status, FerVarType as Type,
+    FerVarAction as Action, FerVarInfo as Info, FerVarPerm as Perm, FerVarType as Type,
     FerVarValue as Value,
 };
 
 #[repr(transparent)]
-pub(crate) struct VariableBase {
+pub struct VariableBase {
     raw: *mut FerVar,
 }
 
@@ -24,11 +24,6 @@ unsafe impl Send for VariableBase {}
 impl VariableBase {
     pub unsafe fn from_raw(raw: *mut FerVar) -> Self {
         Self { raw }
-    }
-
-    pub unsafe fn clean_proc(&mut self) {
-        let prev = self.state().swap_proc_state(ProcState::Idle);
-        debug_assert_eq!(prev, ProcState::Complete);
     }
 
     pub fn name(&self) -> &CStr {
@@ -56,7 +51,7 @@ impl VariableBase {
 }
 
 #[repr(transparent)]
-pub(crate) struct VariableUnprotected {
+pub struct VariableUnprotected {
     base: VariableBase,
 }
 
@@ -84,20 +79,15 @@ impl VariableUnprotected {
         debug_assert!(prev == ProcState::Idle || prev == ProcState::Requested);
         state.try_wake();
     }
-    pub unsafe fn complete_read(&mut self) {
-        let prev = self.state().swap_proc_state(ProcState::Ready);
+    pub unsafe fn commit(&mut self, action: Action) {
+        let prev = self.state().swap_proc_state(ProcState::Commited);
         debug_assert_eq!(prev, ProcState::Processing);
-        fer_var_read_complete(self.raw, Status::Ok);
-    }
-    pub unsafe fn complete_write(&mut self) {
-        let prev = self.state().swap_proc_state(ProcState::Ready);
-        debug_assert_eq!(prev, ProcState::Processing);
-        fer_var_write_complete(self.raw, Status::Ok);
+        fer_var_commit(self.raw, action);
     }
     pub unsafe fn proc_end(&mut self) {
         let state = self.state();
-        let prev = state.swap_proc_state(ProcState::Complete);
-        debug_assert_eq!(prev, ProcState::Ready);
+        let prev = state.swap_proc_state(ProcState::Idle);
+        debug_assert_eq!(prev, ProcState::Commited);
         state.try_wake();
     }
 
@@ -122,7 +112,7 @@ impl DerefMut for VariableUnprotected {
 }
 
 #[repr(transparent)]
-pub(crate) struct Variable {
+pub struct Variable {
     var: VariableUnprotected,
 }
 
@@ -159,7 +149,7 @@ impl DerefMut for Variable {
     }
 }
 
-pub(crate) struct Guard<'a> {
+pub struct Guard<'a> {
     var: &'a mut VariableUnprotected,
 }
 impl<'a> Guard<'a> {
@@ -186,21 +176,21 @@ impl<'a> Drop for Guard<'a> {
 }
 
 #[atomic_enum]
-#[derive(PartialEq)]
-pub(crate) enum ProcState {
+#[derive(Eq, PartialEq)]
+pub enum ProcState {
     Idle = 0,
     Requested,
     Processing,
-    Ready,
-    Complete,
+    Commited,
 }
 
-pub(crate) struct State {
+pub struct State {
     proc_state: AtomicProcState,
     waker: AtomicWaker,
 }
 
 impl State {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             proc_state: AtomicProcState::new(ProcState::Idle),

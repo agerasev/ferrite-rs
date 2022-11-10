@@ -11,9 +11,10 @@ pub struct FerVar {
 
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FerVarStatus {
-    Ok = 0,
-    Error,
+pub enum FerVarAction {
+    Discard = 0,
+    Read,
+    Write,
 }
 
 bitflags! {
@@ -21,7 +22,7 @@ bitflags! {
     pub struct FerVarPerm: u32 {
         const READ = 1;
         const WRITE = 2;
-        const NOTIFY = 4;
+        const REQUEST = 4;
     }
 }
 
@@ -76,8 +77,7 @@ extern "C" {
     pub fn fer_app_exit(code: c_int);
 
     pub fn fer_var_request(var: *mut FerVar);
-    pub fn fer_var_read_complete(var: *mut FerVar, status: FerVarStatus);
-    pub fn fer_var_write_complete(var: *mut FerVar, status: FerVarStatus);
+    pub fn fer_var_commit(var: *mut FerVar, action: FerVarAction);
 
     pub fn fer_var_lock(var: *mut FerVar);
     pub fn fer_var_unlock(var: *mut FerVar);

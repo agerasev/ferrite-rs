@@ -4,7 +4,8 @@ use std::sync::{
     Arc,
 };
 
-use crate::{misc::AsyncFlag, variable::Variable};
+use super::{VarActive, Variable};
+use crate::misc::AsyncFlag;
 
 macro_rules! impl_atomic_variable {
     ($self:ident, $value:ty, $atomic:ty) => {

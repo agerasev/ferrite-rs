@@ -1,4 +1,4 @@
-use super::any::AnyVariable;
+use super::any::{AnyVariable, Var};
 use lazy_static::lazy_static;
 use std::{collections::HashMap, mem, sync::Mutex};
 

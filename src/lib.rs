@@ -4,9 +4,9 @@ pub mod misc;
 pub mod variable;
 
 pub use raw::export;
-pub use variable::{AnyVariable, Downcast, Variable};
-
-use std::collections::HashMap;
+pub use variable::{
+    AnyVariable, ArrayVariable, Downcast, Registry, Var, VarActive, VarSync, Variable,
+};
 
 #[macro_export]
 macro_rules! entry_point {
@@ -26,8 +26,10 @@ macro_rules! entry_point {
     );
 }
 
-pub type Registry = HashMap<String, AnyVariable>;
-
 pub struct Context {
     pub registry: Registry,
+}
+
+pub mod prelude {
+    pub use super::{Downcast, Var, VarActive, VarSync};
 }
