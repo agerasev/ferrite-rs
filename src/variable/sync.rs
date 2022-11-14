@@ -18,7 +18,7 @@ pub trait VarSync: Var {
     /// Acqure value if variable is being processed now.
     fn try_acquire(&mut self) -> Option<ValueGuard<'_, Self>> {
         if let ProcState::Processing = self.raw().state().proc_state() {
-            Some(ValueGuard { owner: Some(self) })
+            Some(ValueGuard::new(self))
         } else {
             None
         }
@@ -58,7 +58,7 @@ impl<'a, V: VarSync> Future for Acquire<'a, V> {
             }
             ProcState::Requested => (),
             ProcState::Processing => {
-                return Poll::Ready(ValueGuard { owner: Some(owner) });
+                return Poll::Ready(ValueGuard::new(owner));
             }
             _ => (),
         }
@@ -73,6 +73,10 @@ pub struct ValueGuard<'a, V: VarSync> {
 }
 
 impl<'a, V: VarSync> ValueGuard<'a, V> {
+    fn new(owner: &'a mut V) -> Self {
+        Self { owner: Some(owner) }
+    }
+
     pub(crate) fn owner(&self) -> &V {
         self.owner.as_ref().unwrap()
     }
@@ -119,7 +123,7 @@ impl<'a, V: VarSync> Future for Commit<'a, V> {
         state.set_waker(cx.waker());
         match state.proc_state() {
             ProcState::Commited => Poll::Pending,
-            ProcState::Idle => Poll::Ready(()),
+            ProcState::Idle | ProcState::Processing => Poll::Ready(()),
             _ => unreachable!(),
         }
     }
