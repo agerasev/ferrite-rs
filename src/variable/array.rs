@@ -10,7 +10,7 @@ pub type FlatVec<T> = GenericVec<T, [MaybeUninit<T>]>;
 
 use super::{
     any::{AnyVariable, Var},
-    sync::{CommitFuture, ValueGuard, VarActive, VarSync},
+    sync::{Commit, ValueGuard, VarActive, VarSync},
 };
 use crate::raw::{self, variable::Action};
 
@@ -58,15 +58,54 @@ impl<T: Copy, const R: bool, const W: bool, const A: bool> ArrayVariable<T, R, W
 }
 
 impl<'a, T: Copy, const R: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, R, true, A>> {
-    pub fn write(mut self) -> WriteGuard<'a, T, R, A> {
+    pub fn write_in_place(mut self) -> WriteGuard<'a, T, R, A> {
         unsafe { self.owner_mut().value_mut().clear() };
         WriteGuard { guard: self }
+    }
+    pub fn write_from<I: IntoIterator<Item = T>>(
+        self,
+        iter: I,
+    ) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+        let mut var = self.write_in_place();
+        var.extend(iter);
+        var.commit()
+    }
+    pub fn write_from_slice(self, slice: &[T]) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+        let mut var = self.write_in_place();
+        var.extend_from_slice(slice);
+        var.commit()
+    }
+    pub fn write_from_iter<I: Iterator<Item = T>>(
+        self,
+        iter: I,
+    ) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+        let mut var = self.write_in_place();
+        var.extend_from_iter(iter);
+        var.commit()
     }
 }
 
 impl<'a, T: Copy, const W: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, true, W, A>> {
-    pub fn read(self) -> ReadGuard<'a, T, W, A> {
+    pub fn read_in_place(self) -> ReadGuard<'a, T, W, A> {
         ReadGuard { guard: self }
+    }
+    pub async fn read_into_vec(self) -> Vec<T> {
+        let var = self.read_in_place();
+        let res = Vec::from(var.as_ref());
+        var.close().await;
+        res
+    }
+    pub async fn read_to_slice(self, slice: &mut [T]) -> usize {
+        let var = self.read_in_place();
+        let len = var.len();
+        slice[..len].copy_from_slice(&var);
+        var.close().await;
+        len
+    }
+    pub async fn read_to_vec(self, vec: &mut Vec<T>) {
+        let var = self.read_in_place();
+        vec.extend_from_slice(&var);
+        var.close().await;
     }
 }
 
@@ -76,10 +115,10 @@ pub struct WriteGuard<'a, T: Copy, const R: bool, const A: bool> {
 }
 
 impl<'a, T: Copy, const R: bool, const A: bool> WriteGuard<'a, T, R, A> {
-    pub fn commit(self) -> CommitFuture<'a, ArrayVariable<T, R, true, A>> {
+    pub fn commit(self) -> Commit<'a, ArrayVariable<T, R, true, A>> {
         self.guard.commit(Action::Write)
     }
-    pub fn discard(self) -> CommitFuture<'a, ArrayVariable<T, R, true, A>> {
+    pub fn discard(self) -> Commit<'a, ArrayVariable<T, R, true, A>> {
         self.guard.discard()
     }
 }
@@ -102,7 +141,7 @@ pub struct ReadGuard<'a, T: Copy, const W: bool, const A: bool> {
 }
 
 impl<'a, T: Copy, const W: bool, const A: bool> ReadGuard<'a, T, W, A> {
-    pub fn close(self) -> CommitFuture<'a, ArrayVariable<T, true, W, A>> {
+    pub fn close(self) -> Commit<'a, ArrayVariable<T, true, W, A>> {
         self.guard.commit(Action::Read)
     }
 }

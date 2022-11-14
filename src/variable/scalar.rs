@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use super::{
     any::{AnyVariable, Var},
-    sync::{CommitFuture, ValueGuard, VarActive, VarSync},
+    sync::{Commit, ValueGuard, VarActive, VarSync},
 };
 use crate::raw::{self, variable::Action};
 
@@ -42,7 +42,7 @@ impl<T: Copy, const R: bool, const W: bool, const A: bool> Variable<T, R, W, A> 
 }
 
 impl<'a, T: Copy, const R: bool, const A: bool> ValueGuard<'a, Variable<T, R, true, A>> {
-    pub fn write(mut self, value: T) -> CommitFuture<'a, Variable<T, R, true, A>> {
+    pub fn write(mut self, value: T) -> Commit<'a, Variable<T, R, true, A>> {
         *unsafe { self.owner_mut().value_mut() } = value;
         self.commit(Action::Write)
     }

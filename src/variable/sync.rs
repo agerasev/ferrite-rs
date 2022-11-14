@@ -8,17 +8,27 @@ use super::Var;
 use crate::raw::variable::{Action, ProcState};
 
 pub trait VarSync: Var {
-    fn wait(&mut self) -> WaitFuture<'_, Self> {
-        WaitFuture {
+    /// Passively wait for variable being processed.
+    fn acquire(&mut self) -> Acquire<'_, Self> {
+        Acquire {
             owner: Some(self),
             request: false,
+        }
+    }
+    /// Acqure value if variable is being processed now.
+    fn try_acquire(&mut self) -> Option<ValueGuard<'_, Self>> {
+        if let ProcState::Processing = self.raw().state().proc_state() {
+            Some(ValueGuard { owner: Some(self) })
+        } else {
+            None
         }
     }
 }
 
 pub trait VarActive: VarSync {
-    fn request(&mut self) -> WaitFuture<'_, Self> {
-        WaitFuture {
+    /// Request variable processing and acquire value.
+    fn request(&mut self) -> Acquire<'_, Self> {
+        Acquire {
             owner: Some(self),
             request: true,
         }
@@ -26,14 +36,14 @@ pub trait VarActive: VarSync {
 }
 
 #[must_use]
-pub struct WaitFuture<'a, V: VarSync> {
+pub struct Acquire<'a, V: VarSync> {
     owner: Option<&'a mut V>,
     request: bool,
 }
 
-impl<'a, V: VarSync> Unpin for WaitFuture<'a, V> {}
+impl<'a, V: VarSync> Unpin for Acquire<'a, V> {}
 
-impl<'a, V: VarSync> Future for WaitFuture<'a, V> {
+impl<'a, V: VarSync> Future for Acquire<'a, V> {
     type Output = ValueGuard<'a, V>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -75,13 +85,13 @@ impl<'a, V: VarSync> ValueGuard<'a, V> {
         assert_eq!(raw.state().proc_state(), ProcState::Processing);
         raw.lock().commit(action);
     }
-    pub(crate) fn commit(mut self, action: Action) -> CommitFuture<'a, V> {
+    pub(crate) fn commit(mut self, action: Action) -> Commit<'a, V> {
         unsafe { self.commit_in_place(action) };
-        CommitFuture {
+        Commit {
             owner: self.owner.take().unwrap(),
         }
     }
-    pub fn discard(self) -> CommitFuture<'a, V> {
+    pub fn discard(self) -> Commit<'a, V> {
         self.commit(Action::Discard)
     }
 }
@@ -95,13 +105,13 @@ impl<'a, V: VarSync> Drop for ValueGuard<'a, V> {
 }
 
 #[must_use]
-pub struct CommitFuture<'a, V: VarSync> {
+pub struct Commit<'a, V: VarSync> {
     owner: &'a mut V,
 }
 
-impl<'a, V: VarSync> Unpin for CommitFuture<'a, V> {}
+impl<'a, V: VarSync> Unpin for Commit<'a, V> {}
 
-impl<'a, V: VarSync> Future for CommitFuture<'a, V> {
+impl<'a, V: VarSync> Future for Commit<'a, V> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
