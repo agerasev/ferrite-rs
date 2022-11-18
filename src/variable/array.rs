@@ -50,6 +50,8 @@ impl<T: Copy, const R: bool, const W: bool, const A: bool> ArrayVariable<T, R, W
         &*(slice::from_raw_parts(self.raw().value_ptr() as *const u8, cap) as *const [u8]
             as *const [T] as *const FlatVec<T>)
     }
+}
+impl<T: Copy, const R: bool, const A: bool> ArrayVariable<T, R, true, A> {
     unsafe fn value_mut(&mut self) -> &mut FlatVec<T> {
         let cap = self.max_len();
         &mut *(slice::from_raw_parts_mut(self.raw_mut().value_mut_ptr() as *mut u8, cap)
@@ -65,8 +67,8 @@ impl<'a, T: Copy, const R: bool, const W: bool, const A: bool> Deref
         unsafe { self.owner().value_ref() }
     }
 }
-impl<'a, T: Copy, const R: bool, const W: bool, const A: bool> DerefMut
-    for ValueGuard<'a, ArrayVariable<T, R, W, A>>
+impl<'a, T: Copy, const R: bool, const A: bool> DerefMut
+    for ValueGuard<'a, ArrayVariable<T, R, true, A>>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { self.owner_mut().value_mut() }

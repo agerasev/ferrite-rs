@@ -39,6 +39,8 @@ impl<T: Copy, const R: bool, const W: bool, const A: bool> Variable<T, R, W, A> 
     unsafe fn value_ref(&self) -> &T {
         &*(self.raw().value_ptr() as *const T)
     }
+}
+impl<T: Copy, const R: bool, const A: bool> Variable<T, R, true, A> {
     unsafe fn value_mut(&mut self) -> &mut T {
         &mut *(self.raw_mut().value_mut_ptr() as *mut T)
     }
@@ -52,8 +54,8 @@ impl<'a, T: Copy, const R: bool, const W: bool, const A: bool> Deref
         unsafe { self.owner().value_ref() }
     }
 }
-impl<'a, T: Copy, const R: bool, const W: bool, const A: bool> DerefMut
-    for ValueGuard<'a, Variable<T, R, W, A>>
+impl<'a, T: Copy, const R: bool, const A: bool> DerefMut
+    for ValueGuard<'a, Variable<T, R, true, A>>
 {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { self.owner_mut().value_mut() }
