@@ -7,7 +7,7 @@ use super::{
     any::{AnyVariable, Var},
     sync::{Commit, ValueGuard, VarActive, VarSync},
 };
-use crate::raw::{self, variable::Action};
+use crate::raw;
 
 #[repr(transparent)]
 pub struct Variable<T: Copy, const R: bool, const W: bool, const A: bool> {
@@ -63,14 +63,14 @@ impl<'a, T: Copy, const R: bool, const W: bool, const A: bool> DerefMut
 impl<'a, T: Copy, const R: bool, const A: bool> ValueGuard<'a, Variable<T, R, true, A>> {
     pub fn write(mut self, value: T) -> Commit<'a, Variable<T, R, true, A>> {
         *unsafe { self.owner_mut().value_mut() } = value;
-        self.commit(Action::Write)
+        self.accept()
     }
 }
 
 impl<'a, T: Copy, const W: bool, const A: bool> ValueGuard<'a, Variable<T, true, W, A>> {
     pub async fn read(self) -> T {
         let value = *self;
-        self.commit(Action::Read).await;
+        self.accept().await;
         value
     }
 }

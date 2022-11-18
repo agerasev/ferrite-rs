@@ -3,16 +3,18 @@ use futures::task::AtomicWaker;
 use std::{
     ffi::CStr,
     ops::{Deref, DerefMut},
-    os::raw::c_void,
+    os::raw::{c_char, c_void},
+    ptr,
     sync::atomic::Ordering,
     task::Waker,
 };
 
 use super::import::*;
 pub use super::import::{
-    FerVarAction as Action, FerVarInfo as Info, FerVarPerm as Perm, FerVarType as Type,
-    FerVarValue as Value,
+    FerVarInfo as Info, FerVarPerm as Perm, FerVarType as Type, FerVarValue as Value,
 };
+
+pub type Status<'a> = Result<(), &'a str>;
 
 #[repr(transparent)]
 pub struct VariableBase {
@@ -79,10 +81,19 @@ impl VariableUnprotected {
         debug_assert!(prev == ProcState::Idle || prev == ProcState::Requested);
         state.try_wake();
     }
-    pub unsafe fn commit(&mut self, action: Action) {
+    pub unsafe fn commit(&mut self, status: Status<'_>) {
         let prev = self.state().swap_proc_state(ProcState::Commited);
         debug_assert_eq!(prev, ProcState::Processing);
-        fer_var_commit(self.raw, action);
+
+        match status {
+            Ok(()) => fer_var_commit(self.raw, FerVarStatus::Ok, ptr::null(), 0),
+            Err(message) => fer_var_commit(
+                self.raw,
+                FerVarStatus::Error,
+                message.as_ptr() as *const c_char,
+                message.as_bytes().len(),
+            ),
+        };
     }
     pub unsafe fn proc_end(&mut self) {
         let state = self.state();

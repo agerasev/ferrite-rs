@@ -5,7 +5,7 @@ use std::{
 };
 
 use super::Var;
-use crate::raw::variable::{Action, ProcState};
+use crate::raw::variable::{ProcState, Status};
 
 pub trait VarSync: Var {
     /// Passively wait for variable being processed.
@@ -84,26 +84,34 @@ impl<'a, V: VarSync> ValueGuard<'a, V> {
         self.owner.as_mut().unwrap()
     }
 
-    unsafe fn commit_in_place(&mut self, action: Action) {
+    unsafe fn commit_in_place(&mut self, status: Status<'_>) {
         let raw = self.owner.as_mut().unwrap().raw_mut();
         assert_eq!(raw.state().proc_state(), ProcState::Processing);
-        raw.lock().commit(action);
+        raw.lock().commit(status);
     }
-    pub(crate) fn commit(mut self, action: Action) -> Commit<'a, V> {
-        unsafe { self.commit_in_place(action) };
+    pub(crate) fn commit(mut self, status: Status<'_>) -> Commit<'a, V> {
+        unsafe { self.commit_in_place(status) };
         Commit {
             owner: self.owner.take().unwrap(),
         }
     }
-    pub fn discard(self) -> Commit<'a, V> {
-        self.commit(Action::Discard)
+
+    /// Successfully complete processing and commit value (if needed).
+    pub fn accept(self) -> Commit<'a, V> {
+        self.commit(Status::Ok(()))
+    }
+    /// Report that error occured during value processing.
+    ///
+    /// *Value updates (if any) will be commited anyway.*
+    pub fn reject(self, message: &str) -> Commit<'a, V> {
+        self.commit(Status::Err(message))
     }
 }
 
 impl<'a, V: VarSync> Drop for ValueGuard<'a, V> {
     fn drop(&mut self) {
         if self.owner.is_some() {
-            unsafe { self.commit_in_place(Action::Discard) };
+            unsafe { self.commit_in_place(Status::Err("Unhandled error")) };
         }
     }
 }

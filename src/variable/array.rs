@@ -12,7 +12,7 @@ use super::{
     any::{AnyVariable, Var},
     sync::{Commit, ValueGuard, VarActive, VarSync},
 };
-use crate::raw::{self, variable::Action};
+use crate::raw;
 
 #[repr(transparent)]
 pub struct ArrayVariable<T: Copy, const R: bool, const W: bool, const A: bool> {
@@ -74,46 +74,43 @@ impl<'a, T: Copy, const R: bool, const W: bool, const A: bool> DerefMut
 }
 
 impl<'a, T: Copy, const R: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, R, true, A>> {
-    pub fn write(self) -> Commit<'a, ArrayVariable<T, R, true, A>> {
-        self.commit(Action::Write)
-    }
     pub fn write_from<I: IntoIterator<Item = T>>(
         mut self,
         iter: I,
     ) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+        self.clear();
         self.extend(iter);
-        self.write()
+        self.accept()
     }
     pub fn write_from_slice(mut self, slice: &[T]) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+        self.clear();
         self.extend_from_slice(slice);
-        self.write()
+        self.accept()
     }
     pub fn write_from_iter<I: Iterator<Item = T>>(
         mut self,
         iter: I,
     ) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+        self.clear();
         self.extend_from_iter(iter);
-        self.write()
+        self.accept()
     }
 }
 
 impl<'a, T: Copy, const W: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, true, W, A>> {
-    pub fn read(self) -> Commit<'a, ArrayVariable<T, true, W, A>> {
-        self.commit(Action::Read)
-    }
     pub async fn read_into_vec(self) -> Vec<T> {
         let res = Vec::from(self.as_ref());
-        self.read().await;
+        self.accept().await;
         res
     }
     pub async fn read_to_slice(self, slice: &mut [T]) -> usize {
         let len = self.len();
         slice[..len].copy_from_slice(&self);
-        self.read().await;
+        self.accept().await;
         len
     }
     pub async fn read_to_vec(self, vec: &mut Vec<T>) {
         vec.extend_from_slice(&self);
-        self.read().await;
+        self.accept().await;
     }
 }
