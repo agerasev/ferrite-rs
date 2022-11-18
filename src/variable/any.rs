@@ -33,6 +33,9 @@ impl Var for AnyVariable {
 }
 
 impl AnyVariable {
+    /// # Safety
+    ///
+    /// There must be only one `AnyVariable` associated with raw variable at the moment.
     pub unsafe fn new(raw: raw::Variable) -> Self {
         Self { raw }
     }
