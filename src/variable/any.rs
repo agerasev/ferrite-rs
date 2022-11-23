@@ -1,10 +1,7 @@
 use std::any::TypeId;
 
 use super::{ArrayVariable, Variable};
-use crate::raw::{
-    self,
-    variable::{Info, Perm},
-};
+use crate::raw::{self, variable::Info};
 
 pub trait Var: Sized {
     fn raw(&self) -> &raw::Variable;
@@ -40,37 +37,17 @@ impl AnyVariable {
         Self { raw }
     }
 
-    pub fn downcast_scalar<T: Copy + 'static, const R: bool, const W: bool, const A: bool>(
-        self,
-    ) -> Option<Variable<T, R, W, A>> {
-        let perm = self.info().perm;
-        if (!R || perm.contains(Perm::READ))
-            && (!W || perm.contains(Perm::WRITE))
-            && (!A || perm.contains(Perm::REQUEST))
-        {
-            if self.info().type_.type_id() == TypeId::of::<T>() {
-                Some(unsafe { Variable::from_any(self) })
-            } else {
-                None
-            }
+    pub fn downcast_scalar<T: Copy + 'static>(self) -> Option<Variable<T>> {
+        if self.info().type_.type_id() == TypeId::of::<T>() {
+            Some(unsafe { Variable::from_any(self) })
         } else {
             None
         }
     }
 
-    pub fn downcast_array<T: Copy + 'static, const R: bool, const W: bool, const A: bool>(
-        self,
-    ) -> Option<ArrayVariable<T, R, W, A>> {
-        let perm = self.info().perm;
-        if (!R || perm.contains(Perm::READ))
-            && (!W || perm.contains(Perm::WRITE))
-            && (!A || perm.contains(Perm::REQUEST))
-        {
-            if self.info().type_.type_id() == TypeId::of::<T>() {
-                Some(unsafe { ArrayVariable::from_any(self) })
-            } else {
-                None
-            }
+    pub fn downcast_array<T: Copy + 'static>(self) -> Option<ArrayVariable<T>> {
+        if self.info().type_.type_id() == TypeId::of::<T>() {
+            Some(unsafe { ArrayVariable::from_any(self) })
         } else {
             None
         }
@@ -81,17 +58,13 @@ pub trait Downcast<V> {
     fn downcast(self) -> Option<V>;
 }
 
-impl<T: Copy + 'static, const R: bool, const W: bool, const A: bool> Downcast<Variable<T, R, W, A>>
-    for AnyVariable
-{
-    fn downcast(self) -> Option<Variable<T, R, W, A>> {
-        self.downcast_scalar::<T, R, W, A>()
+impl<T: Copy + 'static> Downcast<Variable<T>> for AnyVariable {
+    fn downcast(self) -> Option<Variable<T>> {
+        self.downcast_scalar::<T>()
     }
 }
-impl<T: Copy + 'static, const R: bool, const W: bool, const A: bool>
-    Downcast<ArrayVariable<T, R, W, A>> for AnyVariable
-{
-    fn downcast(self) -> Option<ArrayVariable<T, R, W, A>> {
-        self.downcast_array::<T, R, W, A>()
+impl<T: Copy + 'static> Downcast<ArrayVariable<T>> for AnyVariable {
+    fn downcast(self) -> Option<ArrayVariable<T>> {
+        self.downcast_array::<T>()
     }
 }

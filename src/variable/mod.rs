@@ -9,4 +9,4 @@ pub use any::{AnyVariable, Downcast, Var};
 pub use array::ArrayVariable;
 pub use registry::Registry;
 pub use scalar::Variable;
-pub use sync::{VarActive, VarSync};
+pub use sync::VarSync;

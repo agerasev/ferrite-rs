@@ -4,7 +4,7 @@ use std::sync::{
     Arc,
 };
 
-use super::{VarActive, Variable};
+use super::{VarSync, Variable};
 use crate::misc::AsyncFlag;
 
 macro_rules! impl_atomic_variable {
@@ -16,7 +16,7 @@ macro_rules! impl_atomic_variable {
 
         impl $self {
             pub fn new(
-                mut variable: Variable<$value, false, true, true>,
+                mut variable: Variable<$value>,
                 exec: &impl Spawn,
             ) -> Result<Arc<Self>, SpawnError> {
                 let self_ = Arc::new(Self {

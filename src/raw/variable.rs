@@ -10,9 +10,7 @@ use std::{
 };
 
 use super::import::*;
-pub use super::import::{
-    FerVarInfo as Info, FerVarPerm as Perm, FerVarType as Type, FerVarValue as Value,
-};
+pub use super::import::{FerVarInfo as Info, FerVarType as Type, FerVarValue as Value};
 
 pub type Status<'a> = Result<(), &'a str>;
 

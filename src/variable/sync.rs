@@ -23,9 +23,6 @@ pub trait VarSync: Var {
             None
         }
     }
-}
-
-pub trait VarActive: VarSync {
     /// Request variable processing and acquire value.
     fn request(&mut self) -> Acquire<'_, Self> {
         Acquire {
