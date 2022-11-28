@@ -146,6 +146,8 @@ impl Variable {
     }
 }
 
+unsafe impl Sync for Variable {}
+
 impl Deref for Variable {
     type Target = VariableBase;
     fn deref(&self) -> &Self::Target {
