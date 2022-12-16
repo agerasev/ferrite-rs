@@ -10,9 +10,7 @@ use std::{
 };
 
 use super::import::*;
-pub use super::import::{
-    FerVarInfo as Info, FerVarPerm as Perm, FerVarType as Type, FerVarValue as Value,
-};
+pub use super::import::{FerVarInfo as Info, FerVarType as Type, FerVarValue as Value};
 
 pub type Status<'a> = Result<(), &'a str>;
 
@@ -147,6 +145,8 @@ impl Variable {
         Guard::new(&mut self.var)
     }
 }
+
+unsafe impl Sync for Variable {}
 
 impl Deref for Variable {
     type Target = VariableBase;

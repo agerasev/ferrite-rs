@@ -10,17 +10,17 @@ pub type FlatVec<T> = GenericVec<T, [MaybeUninit<T>]>;
 
 use super::{
     any::{AnyVariable, Var},
-    sync::{Commit, ValueGuard, VarActive, VarSync},
+    sync::{Commit, ValueGuard, VarSync},
 };
 use crate::raw;
 
 #[repr(transparent)]
-pub struct ArrayVariable<T: Copy, const R: bool, const W: bool, const A: bool> {
+pub struct ArrayVariable<T: Copy> {
     any: AnyVariable,
     _phantom: PhantomData<T>,
 }
 
-impl<T: Copy, const R: bool, const W: bool, const A: bool> Var for ArrayVariable<T, R, W, A> {
+impl<T: Copy> Var for ArrayVariable<T> {
     fn raw(&self) -> &raw::Variable {
         self.any.raw()
     }
@@ -29,11 +29,9 @@ impl<T: Copy, const R: bool, const W: bool, const A: bool> Var for ArrayVariable
     }
 }
 
-impl<T: Copy, const R: bool, const W: bool, const A: bool> VarSync for ArrayVariable<T, R, W, A> {}
+impl<T: Copy> VarSync for ArrayVariable<T> {}
 
-impl<T: Copy, const R: bool, const W: bool> VarActive for ArrayVariable<T, R, W, true> {}
-
-impl<T: Copy, const R: bool, const W: bool, const A: bool> ArrayVariable<T, R, W, A> {
+impl<T: Copy> ArrayVariable<T> {
     pub(crate) unsafe fn from_any(any: AnyVariable) -> Self {
         Self {
             any,
@@ -51,7 +49,7 @@ impl<T: Copy, const R: bool, const W: bool, const A: bool> ArrayVariable<T, R, W
             as *const [T] as *const FlatVec<T>)
     }
 }
-impl<T: Copy, const R: bool, const A: bool> ArrayVariable<T, R, true, A> {
+impl<T: Copy> ArrayVariable<T> {
     unsafe fn value_mut(&mut self) -> &mut FlatVec<T> {
         let cap = self.max_len();
         &mut *(slice::from_raw_parts_mut(self.raw_mut().value_mut_ptr() as *mut u8, cap)
@@ -59,32 +57,28 @@ impl<T: Copy, const R: bool, const A: bool> ArrayVariable<T, R, true, A> {
     }
 }
 
-impl<'a, T: Copy, const R: bool, const W: bool, const A: bool> Deref
-    for ValueGuard<'a, ArrayVariable<T, R, W, A>>
-{
+impl<'a, T: Copy> Deref for ValueGuard<'a, ArrayVariable<T>> {
     type Target = FlatVec<T>;
     fn deref(&self) -> &Self::Target {
         unsafe { self.owner().value_ref() }
     }
 }
-impl<'a, T: Copy, const R: bool, const A: bool> DerefMut
-    for ValueGuard<'a, ArrayVariable<T, R, true, A>>
-{
+impl<'a, T: Copy> DerefMut for ValueGuard<'a, ArrayVariable<T>> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { self.owner_mut().value_mut() }
     }
 }
 
-impl<'a, T: Copy, const R: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, R, true, A>> {
+impl<'a, T: Copy> ValueGuard<'a, ArrayVariable<T>> {
     pub fn write_from<I: IntoIterator<Item = T>>(
         mut self,
         iter: I,
-    ) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+    ) -> Commit<'a, ArrayVariable<T>> {
         self.clear();
         self.extend(iter);
         self.accept()
     }
-    pub fn write_from_slice(mut self, slice: &[T]) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+    pub fn write_from_slice(mut self, slice: &[T]) -> Commit<'a, ArrayVariable<T>> {
         self.clear();
         self.extend_from_slice(slice);
         self.accept()
@@ -92,14 +86,14 @@ impl<'a, T: Copy, const R: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, 
     pub fn write_from_iter<I: Iterator<Item = T>>(
         mut self,
         iter: I,
-    ) -> Commit<'a, ArrayVariable<T, R, true, A>> {
+    ) -> Commit<'a, ArrayVariable<T>> {
         self.clear();
         self.extend_from_iter(iter);
         self.accept()
     }
 }
 
-impl<'a, T: Copy, const W: bool, const A: bool> ValueGuard<'a, ArrayVariable<T, true, W, A>> {
+impl<'a, T: Copy> ValueGuard<'a, ArrayVariable<T>> {
     pub async fn read_into_vec(self) -> Vec<T> {
         let res = Vec::from(self.as_ref());
         self.accept().await;

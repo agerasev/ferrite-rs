@@ -4,9 +4,7 @@ pub mod misc;
 pub mod variable;
 
 pub use raw::export;
-pub use variable::{
-    AnyVariable, ArrayVariable, Downcast, Registry, Var, VarActive, VarSync, Variable,
-};
+pub use variable::{AnyVariable, ArrayVariable, Downcast, Registry, Var, VarSync, Variable};
 
 #[macro_export]
 macro_rules! entry_point {
@@ -31,5 +29,5 @@ pub struct Context {
 }
 
 pub mod prelude {
-    pub use super::{Downcast, Var, VarActive, VarSync};
+    pub use super::{Downcast, Var, VarSync};
 }

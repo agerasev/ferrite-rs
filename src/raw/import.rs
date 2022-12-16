@@ -1,4 +1,3 @@
-use bitflags::bitflags;
 use std::{
     any::TypeId,
     os::raw::{c_char, c_int, c_void},
@@ -14,15 +13,6 @@ pub struct FerVar {
 pub enum FerVarStatus {
     Ok = 0,
     Error,
-}
-
-bitflags! {
-    #[repr(transparent)]
-    pub struct FerVarPerm: u32 {
-        const READ = 1;
-        const WRITE = 2;
-        const REQUEST = 4;
-    }
 }
 
 #[repr(u32)]
@@ -60,7 +50,6 @@ impl FerVarType {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct FerVarInfo {
-    pub perm: FerVarPerm,
     pub type_: FerVarType,
     pub max_len: usize,
 }
