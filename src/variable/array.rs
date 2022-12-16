@@ -3,7 +3,7 @@ use std::{
     marker::PhantomData,
     mem::MaybeUninit,
     ops::{Deref, DerefMut},
-    slice,
+    ptr,
 };
 
 pub type FlatVec<T> = GenericVec<T, [MaybeUninit<T>]>;
@@ -45,15 +45,15 @@ impl<T: Copy> ArrayVariable<T> {
 
     unsafe fn value_ref(&self) -> &FlatVec<T> {
         let cap = self.max_len();
-        &*(slice::from_raw_parts(self.raw().value_ptr() as *const u8, cap) as *const [u8]
-            as *const [T] as *const FlatVec<T>)
+        &*(ptr::slice_from_raw_parts(self.raw().value_ptr() as *const u8, cap) as *const [T]
+            as *const FlatVec<T>)
     }
 }
 impl<T: Copy> ArrayVariable<T> {
     unsafe fn value_mut(&mut self) -> &mut FlatVec<T> {
         let cap = self.max_len();
-        &mut *(slice::from_raw_parts_mut(self.raw_mut().value_mut_ptr() as *mut u8, cap)
-            as *mut [u8] as *mut [T] as *mut FlatVec<T>)
+        &mut *(ptr::slice_from_raw_parts_mut(self.raw_mut().value_mut_ptr() as *mut u8, cap)
+            as *mut [T] as *mut FlatVec<T>)
     }
 }
 
