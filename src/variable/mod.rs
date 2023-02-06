@@ -5,7 +5,7 @@ pub mod registry;
 pub mod scalar;
 pub mod sync;
 
-pub use any::{AnyVariable, Downcast, Var};
+pub use any::{AnyVariable, Downcast, Info, Var};
 pub use array::ArrayVariable;
 pub use registry::Registry;
 pub use scalar::Variable;

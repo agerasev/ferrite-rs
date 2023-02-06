@@ -1,8 +1,5 @@
 use futures::task::{Spawn, SpawnError, SpawnExt};
-use std::sync::{
-    atomic::{AtomicI32, AtomicU32, Ordering},
-    Arc,
-};
+use std::sync::{atomic::*, Arc};
 
 use super::{VarSync, Variable};
 use crate::misc::AsyncFlag;
@@ -42,5 +39,11 @@ macro_rules! impl_atomic_variable {
     };
 }
 
+impl_atomic_variable!(AtomicVariableU8, u8, AtomicU8);
+impl_atomic_variable!(AtomicVariableI8, i8, AtomicI8);
+impl_atomic_variable!(AtomicVariableU16, u16, AtomicU16);
+impl_atomic_variable!(AtomicVariableI16, i16, AtomicI16);
 impl_atomic_variable!(AtomicVariableU32, u32, AtomicU32);
 impl_atomic_variable!(AtomicVariableI32, i32, AtomicI32);
+impl_atomic_variable!(AtomicVariableU64, u64, AtomicU64);
+impl_atomic_variable!(AtomicVariableI64, i64, AtomicI64);

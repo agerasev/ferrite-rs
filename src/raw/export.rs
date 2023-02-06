@@ -4,15 +4,17 @@ use super::{
     import::*,
     variable::{Variable, VariableUnprotected},
 };
-use crate::variable::{registry, AnyVariable};
+use crate::variable::{
+    registry::{self, Registry},
+    AnyVariable,
+};
 use std::{
-    collections::HashMap,
     panic::{self, PanicInfo},
     thread,
 };
 
 extern "Rust" {
-    pub fn ferrite_app_main(variables: HashMap<String, AnyVariable>);
+    pub fn ferrite_app_main(variables: Registry);
 }
 
 #[no_mangle]

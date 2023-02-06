@@ -1,7 +1,9 @@
 use std::any::TypeId;
 
 use super::{ArrayVariable, Variable};
-use crate::raw::{self, variable::Info};
+use crate::raw;
+
+pub use raw::variable::Info;
 
 pub trait Var: Sized {
     fn raw(&self) -> &raw::Variable;
