@@ -1,10 +1,21 @@
-mod raw;
+mod downcast;
+mod import;
 
-pub mod misc;
+pub mod export;
+pub mod registry;
+pub mod typed;
 pub mod variable;
+//pub mod misc;
+//pub mod atomic;
 
-pub use raw::export;
-pub use variable::{AnyVariable, ArrayVariable, Downcast, Registry, Var, VarSync, Variable};
+pub use downcast::Downcast;
+pub use registry::Registry;
+pub use typed::{FlatVec, TypedVariable};
+pub use variable::{Info, Variable};
+
+pub struct Context {
+    pub registry: Registry,
+}
 
 #[macro_export]
 macro_rules! entry_point {
@@ -22,12 +33,4 @@ macro_rules! entry_point {
             $fn_name(ctx)
         }
     );
-}
-
-pub struct Context {
-    pub registry: Registry,
-}
-
-pub mod prelude {
-    pub use super::{Downcast, Var, VarSync};
 }

@@ -1,18 +1,22 @@
-use super::any::{AnyVariable, Downcast, Info, Var};
+use crate::{Downcast, Info, Variable};
 use derive_more::{Deref, DerefMut, Display, Error};
 use lazy_static::lazy_static;
 use std::{collections::HashMap, mem, sync::Mutex};
 
 #[derive(Deref, DerefMut)]
 #[repr(transparent)]
-pub struct Registry(HashMap<String, AnyVariable>);
+pub struct Registry(HashMap<String, Variable>);
 
 lazy_static! {
     static ref REGISTRY: Mutex<Registry> = Mutex::new(Registry(HashMap::new()));
 }
 
-pub(crate) fn add_variable(var: AnyVariable) {
-    assert!(REGISTRY.lock().unwrap().insert(var.name(), var).is_none());
+pub(crate) fn add_variable(var: Variable) {
+    assert!(REGISTRY
+        .lock()
+        .unwrap()
+        .insert(var.name().into(), var)
+        .is_none());
 }
 
 pub(crate) fn take() -> Registry {
@@ -43,7 +47,7 @@ pub struct CheckEmptyError(#[error(not(source))] pub Vec<String>);
 impl Registry {
     pub fn remove_downcast<V>(&mut self, name: &str) -> Result<V, GetDowncastError>
     where
-        AnyVariable: Downcast<V>,
+        Variable: Downcast<V>,
     {
         log::debug!("take: {}", name);
         let var = match self.remove(name) {
