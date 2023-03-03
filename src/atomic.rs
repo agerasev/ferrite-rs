@@ -25,7 +25,7 @@ impl<T: Type> AtomicVariable<T> {
         let mut guard = self.variable.lock().unwrap();
         let mut locked = guard.lock();
         let state = locked.state();
-        state.set_waker(&waker_ref(&self));
+        state.set_waker(&waker_ref(self));
         match state.stage() {
             Stage::Idle => unsafe { locked.request_proc() },
             Stage::Requested => (),

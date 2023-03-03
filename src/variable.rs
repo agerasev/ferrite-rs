@@ -49,7 +49,7 @@ impl Variable {
         unsafe { (self.user_data() as *const SharedState).as_ref() }.unwrap()
     }
 
-    pub fn lock(&mut self) -> LockedVariable<'_> {
+    pub(crate) fn lock(&mut self) -> LockedVariable<'_> {
         unsafe {
             fer_var_lock(self.raw);
             LockedVariable { base: self }
@@ -100,7 +100,7 @@ impl SystemVariable {
 /// Mutually exclusive with [`SystemVariable`] and other instances of [`LockedVariable`].
 #[repr(transparent)]
 #[derive(Deref, DerefMut)]
-pub struct LockedVariable<'a> {
+pub(crate) struct LockedVariable<'a> {
     base: &'a Variable,
 }
 

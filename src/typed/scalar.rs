@@ -5,10 +5,10 @@ pub trait Type: Copy + Send + Sync + 'static {}
 impl<V: Copy + Send + Sync + 'static> Type for V {}
 
 impl<T: Type> TypedVariable<T> {
-    pub unsafe fn value_ref(&self) -> &T {
+    unsafe fn value_ref(&self) -> &T {
         &*(self.value_ptr() as *const T)
     }
-    pub unsafe fn value_mut(&mut self) -> &mut T {
+    unsafe fn value_mut(&mut self) -> &mut T {
         &mut *(self.value_ptr() as *mut T)
     }
 }

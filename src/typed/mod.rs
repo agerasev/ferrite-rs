@@ -39,22 +39,14 @@ impl<V: Value + ?Sized> TypedVariable<V> {
 
 impl<V: Value + ?Sized> TypedVariable<V> {
     /// Passively wait for variable being processed.
-    pub fn wait_next(&mut self) -> Acquire<'_, V> {
+    pub fn wait(&mut self) -> Acquire<'_, V> {
         Acquire {
             owner: Some(self),
             request: false,
         }
     }
-    /// Acqure value if variable is being processed now.
-    pub fn try_next(&mut self) -> Option<ValueGuard<'_, V>> {
-        if let Stage::Processing = self.state().stage() {
-            Some(ValueGuard::new(self))
-        } else {
-            None
-        }
-    }
-    /// Actively request variable processing and acquire value.
-    pub fn get_next(&mut self) -> Acquire<'_, V> {
+    /// Actively request variable processing.
+    pub fn request(&mut self) -> Acquire<'_, V> {
         Acquire {
             owner: Some(self),
             request: true,

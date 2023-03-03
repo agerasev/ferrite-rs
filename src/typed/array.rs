@@ -13,13 +13,12 @@ impl<T: Type> TypedVariable<[T]> {
         self.info().max_len
     }
 
-    pub unsafe fn value_ref(&self) -> &FlatVec<T> {
+    unsafe fn value_ref(&self) -> &FlatVec<T> {
         let cap = self.max_len();
         &*(ptr::slice_from_raw_parts(self.value_ptr() as *const u8, cap) as *const [T]
             as *const FlatVec<T>)
     }
-
-    pub unsafe fn value_mut(&mut self) -> &mut FlatVec<T> {
+    unsafe fn value_mut(&mut self) -> &mut FlatVec<T> {
         let cap = self.max_len();
         &mut *(ptr::slice_from_raw_parts_mut(self.value_ptr() as *mut u8, cap) as *mut [T]
             as *mut FlatVec<T>)
