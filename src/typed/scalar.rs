@@ -1,8 +1,8 @@
 use super::{Commit, TypedVariable, ValueGuard};
 use std::ops::{Deref, DerefMut};
 
-pub trait Type: Copy + 'static {}
-impl<V: Copy + 'static> Type for V {}
+pub trait Type: Copy + Send + Sync + 'static {}
+impl<V: Copy + Send + Sync + 'static> Type for V {}
 
 impl<T: Type> TypedVariable<T> {
     pub unsafe fn value_ref(&self) -> &T {

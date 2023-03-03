@@ -16,8 +16,8 @@ use std::{
     task::{Context, Poll},
 };
 
-pub trait Value: 'static {}
-impl<V: ?Sized + 'static> Value for V {}
+pub trait Value: Sync + 'static {}
+impl<V: ?Sized + Sync + 'static> Value for V {}
 
 #[repr(transparent)]
 #[derive(Deref, DerefMut)]

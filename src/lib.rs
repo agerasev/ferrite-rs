@@ -1,12 +1,12 @@
 mod downcast;
 mod import;
 
+pub mod atomic;
 pub mod export;
 pub mod registry;
 pub mod typed;
 pub mod variable;
 //pub mod misc;
-//pub mod atomic;
 
 pub use downcast::Downcast;
 pub use registry::Registry;
