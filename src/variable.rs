@@ -3,6 +3,7 @@ use derive_more::{Deref, DerefMut};
 use futures::task::AtomicWaker;
 use std::{
     ffi::CStr,
+    mem::ManuallyDrop,
     os::raw::{c_char, c_void},
     ptr,
     str::from_utf8,
@@ -101,10 +102,13 @@ impl SystemVariable {
 #[repr(transparent)]
 #[derive(Deref, DerefMut)]
 pub(crate) struct LockedVariable<'a> {
-    base: &'a Variable,
+    base: &'a mut Variable,
 }
 
 impl<'a> LockedVariable<'a> {
+    pub unsafe fn without_lock(base: &'a mut Variable) -> ManuallyDrop<Self> {
+        ManuallyDrop::new(Self { base })
+    }
     pub unsafe fn request_proc(&mut self) {
         let prev = self.state().swap_stage(Stage::Requested);
         debug_assert_eq!(prev, Stage::Idle);

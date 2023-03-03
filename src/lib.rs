@@ -3,10 +3,10 @@ mod import;
 
 pub mod atomic;
 pub mod export;
+pub mod misc;
 pub mod registry;
 pub mod typed;
 pub mod variable;
-//pub mod misc;
 
 pub use downcast::Downcast;
 pub use registry::Registry;
