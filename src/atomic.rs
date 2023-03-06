@@ -13,7 +13,7 @@ use std::{
 pub struct AtomicVariable<T: Type> {
     variable: Mutex<TypedVariable<T>>,
     value: Atomic<T>,
-    updated: Atomic<bool>,
+    update: Atomic<bool>,
 }
 
 impl<T: Type + Default> AtomicVariable<T> {
@@ -21,24 +21,29 @@ impl<T: Type + Default> AtomicVariable<T> {
         Arc::new(Self {
             variable: Mutex::new(variable),
             value: Atomic::default(),
-            updated: Atomic::new(false),
+            update: Atomic::new(false),
         })
     }
 }
+
 impl<T: Type + Debug> AtomicVariable<T> {
     fn notify(self: &Arc<Self>, locked: &mut LockedVariable<'_>) {
         let state = locked.state();
         state.set_waker(&waker_ref(self));
         match state.stage() {
             Stage::Idle => {
-                if self.updated.load(Ordering::Acquire) {
+                if self.update.load(Ordering::Acquire) {
                     unsafe { locked.request_proc() }
                 }
             }
             Stage::Requested => (),
             Stage::Processing => unsafe {
-                self.updated.store(false, Ordering::Release);
-                *(locked.value_ptr() as *mut T) = self.value.load(Ordering::Acquire);
+                if self.update.swap(false, Ordering::AcqRel) {
+                    *(locked.value_ptr() as *mut T) = self.value.load(Ordering::Acquire);
+                } else {
+                    self.value
+                        .store(*(locked.value_ptr() as *const T), Ordering::Release);
+                }
                 locked.commit(Status::Ok(()));
             },
             Stage::Commited => (),
@@ -46,9 +51,12 @@ impl<T: Type + Debug> AtomicVariable<T> {
     }
     pub fn store(self: &Arc<Self>, value: T) {
         self.value.store(value, Ordering::Release);
-        self.updated.store(true, Ordering::Release);
+        self.update.store(true, Ordering::Release);
         let mut guard = self.variable.lock().unwrap();
         self.notify(&mut guard.lock());
+    }
+    pub fn load(self: &Arc<Self>) -> T {
+        self.value.load(Ordering::Acquire)
     }
 }
 

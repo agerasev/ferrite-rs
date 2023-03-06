@@ -3,7 +3,6 @@ mod import;
 
 pub mod atomic;
 pub mod export;
-pub mod misc;
 pub mod registry;
 pub mod typed;
 pub mod variable;
