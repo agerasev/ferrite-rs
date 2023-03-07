@@ -1,13 +1,7 @@
 #![allow(clippy::missing_safety_doc)]
 
-use super::{
-    import::*,
-    variable::{Variable, VariableUnprotected},
-};
-use crate::variable::{
-    registry::{self, Registry},
-    AnyVariable,
-};
+use super::{import::*, variable::SystemVariable, Variable};
+use crate::registry::{self, Registry};
 use std::{
     panic::{self, PanicInfo},
     thread,
@@ -36,20 +30,18 @@ pub extern "C" fn fer_app_start() {
 
 #[no_mangle]
 pub unsafe extern "C" fn fer_var_init(ptr: *mut FerVar) {
-    let mut unvar = VariableUnprotected::from_raw(ptr);
-    unvar.init();
-    let any_var = AnyVariable::new(Variable::new(unvar));
-    registry::add_variable(any_var);
+    SystemVariable::from_raw(ptr).initialize();
+    registry::add_variable(Variable::from_raw(ptr));
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn fer_var_proc_begin(ptr: *mut FerVar) {
     // No need for lock here - variable is already locked during this call.
-    VariableUnprotected::from_raw(ptr).proc_begin();
+    SystemVariable::from_raw(ptr).proc_begin();
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn fer_var_proc_end(ptr: *mut FerVar) {
     // No need for lock here - variable is already locked during this call.
-    VariableUnprotected::from_raw(ptr).proc_end();
+    SystemVariable::from_raw(ptr).proc_end();
 }
