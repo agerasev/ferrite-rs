@@ -7,11 +7,11 @@ use atomic::Atomic;
 use futures::task::{waker_ref, ArcWake};
 use std::{
     fmt::Debug,
-    sync::{atomic::Ordering, Arc, Mutex},
+    sync::{atomic::Ordering, Arc},
 };
 
 pub struct AtomicVariable<T: Type> {
-    variable: Mutex<TypedVariable<T>>,
+    variable: TypedVariable<T>,
     value: Atomic<T>,
     update: Atomic<bool>,
 }
@@ -19,7 +19,7 @@ pub struct AtomicVariable<T: Type> {
 impl<T: Type + Default> AtomicVariable<T> {
     pub fn new(variable: TypedVariable<T>) -> Arc<Self> {
         Arc::new(Self {
-            variable: Mutex::new(variable),
+            variable,
             value: Atomic::default(),
             update: Atomic::new(false),
         })
@@ -52,8 +52,7 @@ impl<T: Type + Debug> AtomicVariable<T> {
     pub fn store(self: &Arc<Self>, value: T) {
         self.value.store(value, Ordering::Release);
         self.update.store(true, Ordering::Release);
-        let mut guard = self.variable.lock().unwrap();
-        self.notify(&mut guard.lock());
+        self.notify(&mut self.variable.lock());
     }
     pub fn load(self: &Arc<Self>) -> T {
         self.value.load(Ordering::Acquire)
@@ -62,9 +61,8 @@ impl<T: Type + Debug> AtomicVariable<T> {
 
 impl<T: Type + Debug> ArcWake for AtomicVariable<T> {
     fn wake_by_ref(this: &Arc<Self>) {
-        let mut guard = this.variable.lock().unwrap();
         // Variable is already locked when waker is called.
-        let mut not_locked = unsafe { LockedVariable::without_lock(&mut guard) };
+        let mut not_locked = unsafe { LockedVariable::without_lock(&this.variable) };
         this.notify(&mut not_locked);
     }
 }

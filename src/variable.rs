@@ -50,7 +50,7 @@ impl Variable {
         unsafe { (self.user_data() as *const SharedState).as_ref() }.unwrap()
     }
 
-    pub(crate) fn lock(&mut self) -> LockedVariable<'_> {
+    pub(crate) fn lock(&self) -> LockedVariable<'_> {
         unsafe {
             fer_var_lock(self.raw);
             LockedVariable { base: self }
@@ -102,11 +102,11 @@ impl SystemVariable {
 #[repr(transparent)]
 #[derive(Deref, DerefMut)]
 pub(crate) struct LockedVariable<'a> {
-    base: &'a mut Variable,
+    base: &'a Variable,
 }
 
 impl<'a> LockedVariable<'a> {
-    pub unsafe fn without_lock(base: &'a mut Variable) -> ManuallyDrop<Self> {
+    pub unsafe fn without_lock(base: &'a Variable) -> ManuallyDrop<Self> {
         ManuallyDrop::new(Self { base })
     }
     pub unsafe fn request_proc(&mut self) {
