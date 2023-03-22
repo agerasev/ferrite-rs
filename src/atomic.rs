@@ -5,10 +5,7 @@ use crate::{
 };
 use atomic::Atomic;
 use futures::task::{waker_ref, ArcWake};
-use std::{
-    fmt::Debug,
-    sync::{atomic::Ordering, Arc},
-};
+use std::sync::{atomic::Ordering, Arc};
 
 pub struct AtomicVariable<T: Type> {
     variable: TypedVariable<T>,
@@ -18,15 +15,17 @@ pub struct AtomicVariable<T: Type> {
 
 impl<T: Type + Default> AtomicVariable<T> {
     pub fn new(variable: TypedVariable<T>) -> Arc<Self> {
-        Arc::new(Self {
+        let this = Arc::new(Self {
             variable,
             value: Atomic::default(),
             update: Atomic::new(false),
-        })
+        });
+        this.notify(&mut this.variable.lock());
+        this
     }
 }
 
-impl<T: Type + Debug> AtomicVariable<T> {
+impl<T: Type> AtomicVariable<T> {
     fn notify(self: &Arc<Self>, locked: &mut LockedVariable<'_>) {
         let state = locked.state();
         state.set_waker(&waker_ref(self));
@@ -59,7 +58,7 @@ impl<T: Type + Debug> AtomicVariable<T> {
     }
 }
 
-impl<T: Type + Debug> ArcWake for AtomicVariable<T> {
+impl<T: Type> ArcWake for AtomicVariable<T> {
     fn wake_by_ref(this: &Arc<Self>) {
         // Variable is already locked when waker is called.
         let mut not_locked = unsafe { LockedVariable::without_lock(&this.variable) };
