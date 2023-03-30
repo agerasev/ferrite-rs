@@ -69,6 +69,23 @@ impl Registry {
         }
     }
 
+    pub fn remove_downcast_suffix<V>(&mut self, suffix: &str) -> Result<V, GetDowncastError>
+    where
+        Variable: Downcast<V>,
+    {
+        match self
+            .keys()
+            .find(|name| is_suffix(name, suffix))
+            .map(|s| s.clone())
+        {
+            Some(name) => self.remove_downcast(&name),
+            None => Err(GetDowncastError {
+                name: format!("*{}", suffix),
+                kind: GetDowncastErrorKind::NotFound,
+            }),
+        }
+    }
+
     pub fn check_empty(&self) -> Result<(), CheckEmptyError> {
         if !self.is_empty() {
             Err(CheckEmptyError(self.keys().map(String::from).collect()))
@@ -76,4 +93,17 @@ impl Registry {
             Ok(())
         }
     }
+}
+
+fn is_suffix(text: &str, suffix: &str) -> bool {
+    if text.ends_with(suffix) {
+        if text.len() == suffix.len() {
+            return true;
+        }
+        let c = text.chars().nth(text.len() - suffix.len() - 1).unwrap();
+        if c.is_ascii_punctuation() && c != '_' {
+            return true;
+        }
+    }
+    false
 }
