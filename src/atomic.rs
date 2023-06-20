@@ -3,22 +3,28 @@ use crate::{
     variable::{LockedVariable, Stage, Status},
     TypedVariable,
 };
-use atomic::Atomic;
+use async_atomic::Atomic as AsyncAtomic;
 use futures::task::{waker_ref, ArcWake};
-use std::sync::{atomic::Ordering, Arc};
+use std::{
+    ops::Deref,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 pub struct AtomicVariable<T: Type> {
     variable: TypedVariable<T>,
-    value: Atomic<T>,
-    update: Atomic<bool>,
+    value: AsyncAtomic<T>,
+    update: AtomicBool,
 }
 
 impl<T: Type + Default> AtomicVariable<T> {
     pub fn new(variable: TypedVariable<T>) -> Arc<Self> {
         let this = Arc::new(Self {
             variable,
-            value: Atomic::default(),
-            update: Atomic::new(false),
+            value: AsyncAtomic::default(),
+            update: AtomicBool::new(false),
         });
         this.notify(&mut this.variable.lock());
         this
@@ -38,10 +44,9 @@ impl<T: Type> AtomicVariable<T> {
             Stage::Requested => (),
             Stage::Processing => unsafe {
                 if self.update.swap(false, Ordering::AcqRel) {
-                    *(locked.value_ptr() as *mut T) = self.value.load(Ordering::Acquire);
+                    *(locked.value_ptr() as *mut T) = self.value.load();
                 } else {
-                    self.value
-                        .store(*(locked.value_ptr() as *const T), Ordering::Release);
+                    self.value.store(*(locked.value_ptr() as *const T));
                 }
                 locked.commit(Status::Ok(()));
             },
@@ -49,12 +54,9 @@ impl<T: Type> AtomicVariable<T> {
         }
     }
     pub fn store(self: &Arc<Self>, value: T) {
-        self.value.store(value, Ordering::Release);
+        self.value.store(value);
         self.update.store(true, Ordering::Release);
         self.notify(&mut self.variable.lock());
-    }
-    pub fn load(self: &Arc<Self>) -> T {
-        self.value.load(Ordering::Acquire)
     }
 }
 
@@ -63,5 +65,12 @@ impl<T: Type> ArcWake for AtomicVariable<T> {
         // Variable is already locked when waker is called.
         let mut not_locked = unsafe { LockedVariable::without_lock(&this.variable) };
         this.notify(&mut not_locked);
+    }
+}
+
+impl<T: Type> Deref for AtomicVariable<T> {
+    type Target = AsyncAtomic<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.value
     }
 }
