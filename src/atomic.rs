@@ -74,3 +74,8 @@ impl<T: Type> Deref for AtomicVariable<T> {
         &self.value
     }
 }
+impl<T: Type> AsRef<AsyncAtomic<T>> for AtomicVariable<T> {
+    fn as_ref(&self) -> &AsyncAtomic<T> {
+        &self.value
+    }
+}
