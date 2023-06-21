@@ -119,9 +119,9 @@ impl<'a, V: Value + ?Sized> ValueGuard<'a, V> {
     pub fn accept(self) -> Commit<'a, V> {
         self.commit(Status::Ok(()))
     }
-    /// Report that error occured during value processing.
+    /// Report that error occurred during value processing.
     ///
-    /// *Value updates (if any) will be commited anyway.*
+    /// *Value updates (if any) will be committed anyway.*
     pub fn reject(self, message: &str) -> Commit<'a, V> {
         self.commit(Status::Err(message))
     }
@@ -149,7 +149,7 @@ impl<'a, V: Value + ?Sized> Future for Commit<'a, V> {
         let state = self.owner.state();
         state.set_waker(cx.waker());
         match state.stage() {
-            Stage::Commited => Poll::Pending,
+            Stage::Committed => Poll::Pending,
             Stage::Idle | Stage::Processing => Poll::Ready(()),
             _ => unreachable!(),
         }

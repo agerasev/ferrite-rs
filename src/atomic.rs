@@ -50,7 +50,7 @@ impl<T: Type> AtomicVariable<T> {
                 }
                 locked.commit(Status::Ok(()));
             },
-            Stage::Commited => (),
+            Stage::Committed => (),
         }
     }
     pub fn store(self: &Arc<Self>, value: T) {

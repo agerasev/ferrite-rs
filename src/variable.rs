@@ -91,7 +91,7 @@ impl SystemVariable {
     pub unsafe fn proc_end(&mut self) {
         let state = self.state();
         let prev = state.swap_stage(Stage::Idle);
-        debug_assert_eq!(prev, Stage::Commited);
+        debug_assert_eq!(prev, Stage::Committed);
         state.waker.wake();
     }
 }
@@ -115,7 +115,7 @@ impl<'a> LockedVariable<'a> {
         fer_var_request(self.raw);
     }
     pub unsafe fn commit(&mut self, status: Status<'_>) {
-        let prev = self.state().swap_stage(Stage::Commited);
+        let prev = self.state().swap_stage(Stage::Committed);
         debug_assert_eq!(prev, Stage::Processing);
 
         match status {
@@ -142,7 +142,7 @@ pub(crate) enum Stage {
     Idle = 0,
     Requested,
     Processing,
-    Commited,
+    Committed,
 }
 
 pub(crate) struct SharedState {
