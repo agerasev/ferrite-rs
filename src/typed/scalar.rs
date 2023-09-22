@@ -1,5 +1,5 @@
 use super::{Commit, TypedVariable, ValueGuard};
-use futures::stream::{self, Stream};
+use futures::stream::{self, FusedStream, StreamExt};
 use std::ops::{Deref, DerefMut};
 
 pub trait Type: Copy + Send + Sync + 'static {}
@@ -42,9 +42,10 @@ impl<'a, T: Type> ValueGuard<'a, T> {
 }
 
 impl<T: Type> TypedVariable<T> {
-    pub fn into_stream(self) -> impl Stream<Item = T> {
+    pub fn into_stream(self) -> impl FusedStream<Item = T> {
         stream::unfold(self, move |mut this| async move {
             Some((this.wait().await.read().await, this))
         })
+        .fuse()
     }
 }
