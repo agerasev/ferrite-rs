@@ -15,13 +15,11 @@ impl<T: Type> TypedVariable<[T]> {
 
     unsafe fn value_ref(&self) -> &FlatVec<T> {
         let cap = self.max_len();
-        &*(ptr::slice_from_raw_parts(self.value_ptr() as *const u8, cap) as *const [T]
-            as *const FlatVec<T>)
+        &*(ptr::slice_from_raw_parts(self.value_ptr() as *const u8, cap) as *const [T] as *const FlatVec<T>)
     }
     unsafe fn value_mut(&mut self) -> &mut FlatVec<T> {
         let cap = self.max_len();
-        &mut *(ptr::slice_from_raw_parts_mut(self.value_ptr() as *mut u8, cap) as *mut [T]
-            as *mut FlatVec<T>)
+        &mut *(ptr::slice_from_raw_parts_mut(self.value_ptr() as *mut u8, cap) as *mut [T] as *mut FlatVec<T>)
     }
 }
 
@@ -57,7 +55,7 @@ impl<'a, T: Type> ValueGuard<'a, [T]> {
 
 impl<'a, T: Type> ValueGuard<'a, [T]> {
     pub async fn read_into_vec(self) -> Vec<T> {
-        let res = Vec::from(self.as_ref());
+        let res = Vec::from(self.as_slice());
         self.accept().await;
         res
     }
