@@ -3,7 +3,7 @@ use crate::{
     variable::{LockedVariable, Stage, Status},
     TypedVariable,
 };
-use async_atomic::Atomic as AsyncAtomic;
+use async_atomic::{Atomic as AsyncAtomic, GenericSubscriber};
 use futures::task::{waker_ref, ArcWake};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -16,6 +16,8 @@ pub struct AtomicVariable<T: Type> {
     update: AtomicBool,
 }
 
+pub type AtomicSubscriber<T> = GenericSubscriber<T, Arc<AtomicVariable<T>>, AtomicVariable<T>>;
+
 impl<T: Type + Default> AtomicVariable<T> {
     pub fn new(variable: TypedVariable<T>) -> Arc<Self> {
         let this = Arc::new(Self {
@@ -25,6 +27,10 @@ impl<T: Type + Default> AtomicVariable<T> {
         });
         this.notify(&mut this.variable.lock());
         this
+    }
+
+    pub fn subscribe(variable: TypedVariable<T>) -> AtomicSubscriber<T> {
+        AtomicSubscriber::new(Self::new(variable))
     }
 }
 
