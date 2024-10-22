@@ -3,7 +3,7 @@
 use super::{import::*, variable::SystemVariable, Variable};
 use crate::registry::{self, Registry};
 use std::{
-    panic::{self, PanicInfo},
+    panic::{self, PanicHookInfo},
     thread,
 };
 
@@ -14,7 +14,7 @@ extern "Rust" {
 #[no_mangle]
 pub extern "C" fn fer_app_init() {
     let old_hook = panic::take_hook();
-    panic::set_hook(Box::new(move |info: &PanicInfo| {
+    panic::set_hook(Box::new(move |info: &PanicHookInfo| {
         old_hook(info);
         unsafe { fer_app_exit(1) };
     }))
