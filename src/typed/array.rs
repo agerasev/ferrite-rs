@@ -6,7 +6,7 @@ use std::{
     ptr,
 };
 
-pub type FlatVec<T> = GenericVec<T, [MaybeUninit<T>]>;
+pub type FlatVec<T> = GenericVec<[MaybeUninit<T>]>;
 
 impl<T: Type> TypedVariable<[T]> {
     pub fn max_len(&self) -> usize {
@@ -15,11 +15,13 @@ impl<T: Type> TypedVariable<[T]> {
 
     unsafe fn value_ref(&self) -> &FlatVec<T> {
         let cap = self.max_len();
-        &*(ptr::slice_from_raw_parts(self.value_ptr() as *const u8, cap) as *const [T] as *const FlatVec<T>)
+        &*(ptr::slice_from_raw_parts(self.value_ptr() as *const u8, cap) as *const [T]
+            as *const FlatVec<T>)
     }
     unsafe fn value_mut(&mut self) -> &mut FlatVec<T> {
         let cap = self.max_len();
-        &mut *(ptr::slice_from_raw_parts_mut(self.value_ptr() as *mut u8, cap) as *mut [T] as *mut FlatVec<T>)
+        &mut *(ptr::slice_from_raw_parts_mut(self.value_ptr() as *mut u8, cap) as *mut [T]
+            as *mut FlatVec<T>)
     }
 }
 
@@ -38,18 +40,18 @@ impl<'a, T: Type> DerefMut for ValueGuard<'a, [T]> {
 impl<'a, T: Type> ValueGuard<'a, [T]> {
     pub fn write_from<I: IntoIterator<Item = T>>(mut self, iter: I) -> Commit<'a, [T]> {
         self.clear();
-        self.extend(iter);
+        self.extend_until_full(iter.into_iter());
         self.accept()
     }
     pub fn write_from_slice(mut self, slice: &[T]) -> Commit<'a, [T]> {
         self.clear();
-        self.extend_from_slice(slice);
+        let len = self.capacity().min(slice.len());
+        self.push_slice(&slice[..len]).unwrap();
         self.accept()
     }
-    pub fn write_from_iter<I: Iterator<Item = T>>(mut self, iter: I) -> Commit<'a, [T]> {
-        self.clear();
-        self.extend_from_iter(iter);
-        self.accept()
+    #[deprecated = "use `write_from` instead"]
+    pub fn write_from_iter<I: Iterator<Item = T>>(self, iter: I) -> Commit<'a, [T]> {
+        self.write_from(iter)
     }
 }
 

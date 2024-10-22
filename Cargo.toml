@@ -1,6 +1,6 @@
 [package]
 name = "ferrite-core"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 
 [dependencies]
@@ -8,6 +8,6 @@ lazy_static = "1.4.0"
 atomic = { version = "0.5.1", default-features = false }
 async-atomic = { version = "0.1.2", default-features = false }
 futures = "0.3.25"
-stavec = { version = "0.2.1", features = ["repr-c"] }
+stavec = { version = "0.4.2", features = ["repr-c"] }
 log = "0.4"
 derive_more = "0.99.17"
