@@ -3,22 +3,28 @@ use crate::{
     variable::{LockedVariable, Stage, Status},
     TypedVariable,
 };
-use async_atomic::{Atomic as AsyncAtomic, GenericSubscriber};
+use async_atomic::{AsyncAtomic, AsyncAtomicRef, Atom};
 use futures::task::{waker_ref, ArcWake};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
 
-pub struct AtomicVariable<T: Type> {
+pub struct AtomicVariable<T: Type + Atom> {
     variable: TypedVariable<T>,
     value: AsyncAtomic<T>,
     update: AtomicBool,
 }
 
-pub type AtomicSubscriber<T> = GenericSubscriber<T, Arc<AtomicVariable<T>>, AtomicVariable<T>>;
+impl<T: Type + Atom> AsyncAtomicRef for AtomicVariable<T> {
+    type Item = T;
 
-impl<T: Type + Default> AtomicVariable<T> {
+    fn as_atomic(&self) -> &AsyncAtomic<Self::Item> {
+        &self.value
+    }
+}
+
+impl<T: Type + Atom + Default> AtomicVariable<T> {
     pub fn new(variable: TypedVariable<T>) -> Arc<Self> {
         let this = Arc::new(Self {
             variable,
@@ -28,13 +34,9 @@ impl<T: Type + Default> AtomicVariable<T> {
         this.notify(&mut this.variable.lock());
         this
     }
-
-    pub fn subscribe(variable: TypedVariable<T>) -> AtomicSubscriber<T> {
-        AtomicSubscriber::new(Self::new(variable))
-    }
 }
 
-impl<T: Type> AtomicVariable<T> {
+impl<T: Type + Atom> AtomicVariable<T> {
     fn notify(self: &Arc<Self>, locked: &mut LockedVariable<'_>) {
         let state = locked.state();
         state.set_waker(&waker_ref(self));
@@ -90,7 +92,7 @@ impl<T: Type> AtomicVariable<T> {
     }
 }
 
-impl<T: Type> ArcWake for AtomicVariable<T> {
+impl<T: Type + Atom> ArcWake for AtomicVariable<T> {
     fn wake_by_ref(this: &Arc<Self>) {
         // Variable is already locked when waker is called.
         let mut locked = unsafe { LockedVariable::without_lock(&this.variable) };
@@ -98,7 +100,7 @@ impl<T: Type> ArcWake for AtomicVariable<T> {
     }
 }
 
-impl<T: Type> AsRef<AsyncAtomic<T>> for AtomicVariable<T> {
+impl<T: Type + Atom> AsRef<AsyncAtomic<T>> for AtomicVariable<T> {
     fn as_ref(&self) -> &AsyncAtomic<T> {
         &self.value
     }

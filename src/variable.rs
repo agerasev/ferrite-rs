@@ -1,4 +1,4 @@
-use atomic::Atomic;
+use atomig::{Atom, Atomic};
 use derive_more::{Deref, DerefMut};
 use futures::task::AtomicWaker;
 use std::{
@@ -137,7 +137,7 @@ impl Drop for LockedVariable<'_> {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Atom)]
 pub(crate) enum Stage {
     Idle = 0,
     Requested,
