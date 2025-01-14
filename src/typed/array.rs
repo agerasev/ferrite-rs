@@ -25,13 +25,13 @@ impl<T: Type> TypedVariable<[T]> {
     }
 }
 
-impl<'a, T: Type> Deref for ValueGuard<'a, [T]> {
+impl<T: Type> Deref for ValueGuard<'_, [T]> {
     type Target = FlatVec<T>;
     fn deref(&self) -> &Self::Target {
         unsafe { self.owner().value_ref() }
     }
 }
-impl<'a, T: Type> DerefMut for ValueGuard<'a, [T]> {
+impl<T: Type> DerefMut for ValueGuard<'_, [T]> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { self.owner_mut().value_mut() }
     }
@@ -40,7 +40,7 @@ impl<'a, T: Type> DerefMut for ValueGuard<'a, [T]> {
 impl<'a, T: Type> ValueGuard<'a, [T]> {
     pub fn write_from<I: IntoIterator<Item = T>>(mut self, iter: I) -> Commit<'a, [T]> {
         self.clear();
-        self.extend_until_full(iter.into_iter());
+        self.extend_until_full(iter);
         self.accept()
     }
     pub fn write_from_slice(mut self, slice: &[T]) -> Commit<'a, [T]> {
@@ -55,7 +55,7 @@ impl<'a, T: Type> ValueGuard<'a, [T]> {
     }
 }
 
-impl<'a, T: Type> ValueGuard<'a, [T]> {
+impl<T: Type> ValueGuard<'_, [T]> {
     pub async fn read_into_vec(self) -> Vec<T> {
         let res = Vec::from(self.as_slice());
         self.accept().await;
