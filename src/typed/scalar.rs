@@ -14,13 +14,13 @@ impl<T: Type> TypedVariable<T> {
     }
 }
 
-impl<'a, T: Type> Deref for ValueGuard<'a, T> {
+impl<T: Type> Deref for ValueGuard<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         unsafe { self.owner().value_ref() }
     }
 }
-impl<'a, T: Type> DerefMut for ValueGuard<'a, T> {
+impl<T: Type> DerefMut for ValueGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { self.owner_mut().value_mut() }
     }
@@ -33,7 +33,7 @@ impl<'a, T: Type> ValueGuard<'a, T> {
     }
 }
 
-impl<'a, T: Type> ValueGuard<'a, T> {
+impl<T: Type> ValueGuard<'_, T> {
     pub async fn read(self) -> T {
         let value = *self;
         self.accept().await;

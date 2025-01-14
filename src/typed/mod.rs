@@ -60,7 +60,7 @@ pub struct Acquire<'a, V: Value + ?Sized> {
     request: bool,
 }
 
-impl<'a, V: Value + ?Sized> Unpin for Acquire<'a, V> {}
+impl<V: Value + ?Sized> Unpin for Acquire<'_, V> {}
 
 impl<'a, V: Value + ?Sized> Future for Acquire<'a, V> {
     type Output = ValueGuard<'a, V>;
@@ -127,7 +127,7 @@ impl<'a, V: Value + ?Sized> ValueGuard<'a, V> {
     }
 }
 
-impl<'a, V: Value + ?Sized> Drop for ValueGuard<'a, V> {
+impl<V: Value + ?Sized> Drop for ValueGuard<'_, V> {
     fn drop(&mut self) {
         if self.owner.is_some() {
             unsafe { self.commit_in_place(Status::Err("Unhandled error")) };
@@ -140,9 +140,9 @@ pub struct Commit<'a, V: Value + ?Sized> {
     owner: &'a mut TypedVariable<V>,
 }
 
-impl<'a, V: Value + ?Sized> Unpin for Commit<'a, V> {}
+impl<V: Value + ?Sized> Unpin for Commit<'_, V> {}
 
-impl<'a, V: Value + ?Sized> Future for Commit<'a, V> {
+impl<V: Value + ?Sized> Future for Commit<'_, V> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

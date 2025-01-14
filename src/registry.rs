@@ -73,11 +73,7 @@ impl Registry {
     where
         Variable: Downcast<V>,
     {
-        match self
-            .keys()
-            .find(|name| is_suffix(name, suffix))
-            .map(|s| s.clone())
-        {
+        match self.keys().find(|name| is_suffix(name, suffix)).cloned() {
             Some(name) => self.remove_downcast(&name),
             None => Err(GetDowncastError {
                 name: format!("*{}", suffix),

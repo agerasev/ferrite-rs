@@ -124,13 +124,13 @@ impl<'a> LockedVariable<'a> {
                 self.raw,
                 FerVarStatus::Error,
                 message.as_ptr() as *const c_char,
-                message.as_bytes().len(),
+                message.len(),
             ),
         };
     }
 }
 
-impl<'a> Drop for LockedVariable<'a> {
+impl Drop for LockedVariable<'_> {
     fn drop(&mut self) {
         unsafe { fer_var_unlock(self.raw) };
     }
